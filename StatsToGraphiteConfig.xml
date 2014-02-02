@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+	<Graphite>
+		<CarbonServer>yourCarbonServerNameOrIP</CarbonServer>
+		<CarbonServerPort>2003</CarbonServerPort>
+		<MetricPath>servers.datacenter1</MetricPath>
+		<MetricSendIntervalSeconds>15</MetricSendIntervalSeconds>
+		<TimeZoneOfGraphiteServer>UTC</TimeZoneOfGraphiteServer>
+	</Graphite>
+	<PerformanceCounters>
+		<Counter Name="\Network Interface(*)\Bytes Received/sec"/>
+		<Counter Name="\Network Interface(*)\Bytes Sent/sec"/>
+		<Counter Name="\Network Interface(*)\Packets Received Unicast/sec"/>
+		<Counter Name="\Network Interface(*)\Packets Sent Unicast/sec"/>
+		<Counter Name="\Network Interface(*)\Packets Received Non-Unicast/sec"/>
+		<Counter Name="\Network Interface(*)\Packets Sent Non-Unicast/sec"/>
+		<Counter Name="\Processor(_Total)\% Processor Time"/>
+		<Counter Name="\Memory\Available MBytes"/>
+		<Counter Name="\Memory\Pages/sec"/>
+		<Counter Name="\Memory\Pages Input/sec"/>
+		<Counter Name="\System\Processor Queue Length"/>
+		<Counter Name="\System\Threads"/>
+		<Counter Name="\PhysicalDisk(*)\Avg. Disk Write Queue Length"/>
+		<Counter Name="\PhysicalDisk(*)\Avg. Disk Read Queue Length"/>
+	</PerformanceCounters>
+	<Filtering>
+    <MetricFilter Name="isatap"/>
+    <MetricFilter Name="teredo tunneling"/>
+	</Filtering>
+	<Logging>
+		<VerboseOutput>True</VerboseOutput>
+	</Logging>
+</Configuration>

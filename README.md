@@ -17,8 +17,11 @@ A group of PowerShell functions that allow you to send Windows Performance count
 2. Make sure the files are un-blocked by right clicking on them and going to properties.
 3. Modify *StatsToGraphiteConfig.xml* configuration file. Instructions [here](#config).
 4. Open PowerShell and ensure you set your Execution Policy to allow scripts be run, for example `Set-ExecutionPolicy RemoteSigned`.
-5. In PowerShell, enter the directory the you downloaded the script, and dot source it `. .\Graphite-PowerShell.ps1`
-6. Start the script by using the function `Start-StatsToGraphite`. If you want Verbose detailed use `Start-StatsToGraphite -Verbose`.
+
+## Usage
+
+1. In PowerShell, enter the directory the you downloaded the script, and dot source it `. .\Graphite-PowerShell.ps1`
+2. Start the script by using the function `Start-StatsToGraphite`. If you want Verbose detailed use `Start-StatsToGraphite -Verbose`.
 
 You may need to run the PowerShell instance with Administrative rights depending on the performace counters you want to access. This is due to the scripts use of the `Get-Counter` CmdLet. 
 
@@ -29,6 +32,8 @@ From the [Get-Counter help page on TechNet](http://technet.microsoft.com/library
 This is what the verbose output looks like when it is turned on in the XML configuration file.
 
 ![alt text](http://i.imgur.com/G3pwnhf.jpg "Verbse")
+
+That is all there is too getting your metrics into Graphite.
 
 ### Modifying the Configuration File
 
@@ -65,7 +70,9 @@ VerboseOutput | Will provide each of the metrics that were sent over to Carbon a
 
 ## Installing as a Service
 
-The best way to run the `Start-StatsToGraphite` function is to have it run as a service. The easiest way to achive this is using NSSM - the Non-Sucking Service Manager.
+Once you have edited the configuration file and verifed it is functioning correctly by running `Start-StatsToGraphite` in an interactive PowerShell session, you might want to install the script as a service.
+
+The easiest way to achive this is using NSSM - the Non-Sucking Service Manager.
 
 1. Download nssm from [nssm.cc](http://nssm.cc)
 2. Open up an Administrative command prompt and run `nssm install GraphitePowerShell`. (You can call the service whatever you want).
@@ -73,11 +80,17 @@ The best way to run the `Start-StatsToGraphite` function is to have it run as a 
 
 ![alt text](http://i.imgur.com/xkiRZgu.jpg "NSSM Dialog")
 
+4. Click *Install Service*
+5. Make sure the service is started and it is set to Automatic
+6. Check your Graphite server and make sure the metrics are coming in
+
 Setting Name | Value
 --- | ---
 Path | C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
 Startup Directory | C:\GraphitePowerShell
 Options | -command "& { . C:\GraphitePowerShell\Graphite-PowerShell.ps1; Start-StatsToGraphite }"
+
+If you want to remove the service, read the NSSM documentation [http://nssm.cc/commands](http://nssm.cc/commands).
 
 ## <a name="functions">Included Functions
 
