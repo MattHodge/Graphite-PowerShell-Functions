@@ -2,13 +2,33 @@
 
 A group of PowerShell functions that allow you to send Windows Performance counters to a Graphite Server, all configurable from a simple XML file.
 
+## Features
+
+* Sends Stats to Graphite's Carbon daemon using UDP
+* Will convert time zones. If your the server you want the metrics sent from is in a different time zone than your Graphite server, the script will convert the time so metrics come in with a time that matches the Graphite server.
+* All configuration can be done in XML file
+* Reloads the XML file automatically, so if more counters are added, next send interval, the script will pick up and changes or additional counters you added and start sending metrics for them to Graphite
+* Additonal functions are exposed that allow you to send data to Graphite from PowerShell easily. [Here](#functions) is a list of included functions.
+* Can be run as a service
+
 ## Installation
 
-1. Download the *Graphite-PowerShell.ps1* file and the *StatsToGraphiteConfig.xml* configuration file into the same directory, for example C:\GraphitePowerShell
-2. Make sure the files are un-blocked by right clicking on them and going to properties
-3. Modify *StatsToGraphiteConfig.xml* configuration file. Instructions [here](#config)
-3. Open PowerShell and ensure you set your Execution Policy to allow scripts be run eg. `Set-ExecutionPolicy RemoteSigned`
+1. Download the *Graphite-PowerShell.ps1* file and the *StatsToGraphiteConfig.xml* configuration file into the same directory, for example *C:\GraphitePowerShell*
+2. Make sure the files are un-blocked by right clicking on them and going to properties.
+3. Modify *StatsToGraphiteConfig.xml* configuration file. Instructions [here](#config).
+4. Open PowerShell and ensure you set your Execution Policy to allow scripts be run, for example `Set-ExecutionPolicy RemoteSigned`.
+5. In PowerShell, enter the directory the you downloaded the script, and dot source it `. .\Graphite-PowerShell.ps1`
+6. Start the script by using the function `Start-StatsToGraphite`. If you want Verbose detailed use `Start-StatsToGraphite -Verbose`.
 
+You may need to run the PowerShell instance with Administrative rights depending on the performace counters you want to access. This is due to the scripts use of the `Get-Counter` CmdLet. 
+
+From the [Get-Counter help page on TechNet](http://technet.microsoft.com/library/963e9e51-4232-4ccf-881d-c2048ff35c2a(v=wps.630).aspx):
+
+> Performance counters are often protected by access control lists (ACLs). To get all available performance counters, open Windows PowerShell with the "Run as administrator" option.
+
+This is what the verbose output looks like when it is turned on in the XML configuration file.
+
+![alt text](http://i.imgur.com/G3pwnhf.jpg "Verbse")
 
 ### Modifying the Configuration File
 
@@ -42,3 +62,33 @@ This section lists names you want to filter out of the Performance Counter list.
 Configuration Name | Description
 --- | ---
 VerboseOutput | Will provide each of the metrics that were sent over to Carbon and the total execution time of the loop.
+
+## Installing as a Service
+
+The best way to run the `Start-StatsToGraphite` function is to have it run as a service. The easiest way to achive this is using NSSM - the Non-Sucking Service Manager.
+
+1. Download nssm from [nssm.cc](http://nssm.cc)
+2. Open up an Administrative command prompt and run `nssm install GraphitePowerShell`. (You can call the service whatever you want).
+3. A dialog will pop up allowing you to enter in settings for the new service. The table below contains the settings.
+
+![alt text](http://i.imgur.com/xkiRZgu.jpg "NSSM Dialog")
+
+Setting Name | Value
+--- | ---
+Path | C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Startup Directory | C:\GraphitePowerShell
+Options | -command "& { . C:\GraphitePowerShell\Graphite-PowerShell.ps1; Start-StatsToGraphite }"
+
+## <a name="functions">Included Functions
+
+A handful of functions used with the script, which are exposed and available to use in an ad-hoc manner.
+
+For full help for these functions run the PowerShell command `Get-Help | <Function Name>`
+
+Function Name | Description
+--- | ---
+Start-StatsToGraphite | The main function. This is an endless loop which will send metrics to Graphite. 
+ConvertTo-GraphiteMetric | Takes the Windows Performance counter name and coverts it to something that Graphite can use.
+Send-GraphiteMetric | Allows you to send metrics to Graphite in an ad-hoc manner.
+Convert-TimeZone | Converts from one time zone to another.
+Import-XMLConfig | Loads the XML Configuration file. Not really useful out side of the script.
