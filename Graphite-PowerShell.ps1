@@ -383,7 +383,8 @@ function Convert-TimeZone {
                    ParameterSetName='Convert Time Zone')]           
         [ValidateNotNull()]
         [ValidateNotNullOrEmpty()]
-        [ValidateScript({([System.TimeZoneInfo]::GetSystemTimeZones().id) -eq $_})]        
+        # Commenting Out As There Is A Problem on Windows 2003
+        #[ValidateScript({([System.TimeZoneInfo]::GetSystemTimeZones().id) -eq $_})]        
         [string]$ToTimeZone,
 
         [Parameter(Mandatory=$false,
