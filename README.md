@@ -2,6 +2,8 @@
 
 A group of PowerShell functions that allow you to send Windows Performance counters to a Graphite Server, all configurable from a simple XML file.
 
+More details at [http://www.hodgkins.net.au/mswindows/using-powershell-to-send-metrics-graphite/](http://www.hodgkins.net.au/mswindows/using-powershell-to-send-metrics-graphite/)
+
 ## Features
 
 * Sends Stats to Graphite's Carbon daemon using UDP
