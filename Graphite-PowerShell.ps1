@@ -392,6 +392,9 @@ function Convert-TimeZone {
         [switch]$ListTimeZones
     )  
     
+    # Loading dll for Windows 2003 R2 
+    [void][System.Reflection.Assembly]::LoadWithPartialName('System.Core')
+
     # List TimeZones for the user
     if($ListTimeZones)
     {
