@@ -257,11 +257,11 @@ function Send-GraphiteMetric
         The DateTime object of the metric being sent the Graphite Server. This does a direct convertion to unix time without accounting for Time Zones. If your PC time zone does not match your Graphite servers time zone the metric will appear on the incorrect time.
 
     .Example
-        Send-GraphiteMetricMetric -CarbonServer myserver.local -CarbonServerPort 2003 -MetricPath houston.servers.home.cpu.processortime -MetricValue 54 -UnixTime 1391141202
+        Send-GraphiteMetric -CarbonServer myserver.local -CarbonServerPort 2003 -MetricPath houston.servers.home.cpu.processortime -MetricValue 54 -UnixTime 1391141202
         This sends the houston.servers.home.cpu.processortime metric to the specified carbon server.
         
     .Example
-        Send-GraphiteMetricMetric -CarbonServer myserver.local -CarbonServerPort 2003 -MetricPath houston.servers.home.cpu.processortime -MetricValue 54 -DateTime (Get-Date)
+        Send-GraphiteMetric -CarbonServer myserver.local -CarbonServerPort 2003 -MetricPath houston.servers.home.cpu.processortime -MetricValue 54 -DateTime (Get-Date)
         This sends the houston.servers.home.cpu.processortime metric to the specified carbon server.       
         
     .Notes
