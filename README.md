@@ -53,7 +53,9 @@ TimeZoneOfGraphiteServer | Set this to the time zone of your Graphite server and
 
 #### Performance Counters Configuration Section
 
-This section lists the performance counters you want the machine to send to Graphite. You can get these from Performance Monitor (perfmon.exe). I have included some basic performance counters in the configuration file. Asterisks can be used as a wildcard.
+This section lists the performance counters you want the machine to send to Graphite. You can get these from Performance Monitor (perfmon.exe) or by using the command `typeperf -qx` in a command prompt.
+
+I have included some basic performance counters in the configuration file. Asterisks can be used as a wildcard.
 
 Here are some other examples:
 
