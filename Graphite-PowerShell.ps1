@@ -1,28 +1,28 @@
-﻿# Determine The Path Of The XML Config File
+# Determine The Path Of The XML Config File
 $configPath = [string](Split-Path -Parent $MyInvocation.MyCommand.Definition) + '\StatsToGraphiteConfig.xml'
 
 Function Start-StatsToGraphite
-{  
+{
 <#
     .Synopsis
         Starts the loop which sends Windows Performance Counters to Graphite.
 
     .Description
         Starts the loop which sends Windows Performance Counters to Graphite. Configuration is all done from the StatsToGraphiteConfig.xml file.
-        
+
     .Parameter Verbose
         Provides Verbose output which is useful for troubleshooting
 
     .Example
         PS> Start-StatsToGraphite
-        
+
         Will start the endless loop to send stats to Graphite
 
     .Example
         PS> Start-StatsToGraphite -Verbose
-        
+
         Will start the endless loop to send stats to Graphite and provide Verbose output.
-        
+
     .Notes
         NAME:      Start-StatsToGraphite
         AUTHOR:    Matthew Hodgkins
@@ -35,38 +35,38 @@ Function Start-StatsToGraphite
   $Config = Import-XMLConfig -ConfigPath $configPath
 
   # Get Last Run Time
-  $lastRunTime = [DateTime]::MinValue 
+  $lastRunTime = [DateTime]::MinValue
 
   # Start Endless Loop
   While ($True)
   {
     # Loop until enough time has passed to run the process again.
-    While ((Get-Date) - $lastRunTime -lt $Config.MetricTimeSpan) 
-    { 
+    While ((Get-Date) - $lastRunTime -lt $Config.MetricTimeSpan)
+    {
       Start-Sleep -Milliseconds 500
     }
-    
+
     # Update the Last Run Time and Use To Track How Long Execution Took
     $lastRunTime = Get-Date
 
-    # Take the Sample of the Counter     
+    # Take the Sample of the Counter
     $collections = Get-Counter -Counter $Config.Counters -SampleInterval 1 -MaxSamples 1
-     
+
     # Filter the Output of the Counters
     $samples = $collections.CounterSamples
-        
+
     # Verbose
     Write-Verbose "All Samples Collected"
 
     # Convert To The TimeZone of the Graphite Server
     $convertedTime = Convert-TimeZone -DateTime (Get-Date -Format s) -ToTimeZone $Config.TimeZoneOfGraphiteServer
-    
+
     # Get the TargetTime Part of the Script
     $convertedTime = $convertedTime.TargetTime
-    
+
     # Round Time to Nearest Time Period
     $convertedTime = $convertedTime.AddSeconds(-($convertedTime.Second % $Config.MetricSendIntervalSeconds))
-    
+
     # Loop Through All The Counters
     ForEach ($sample in $samples)
     {
@@ -75,7 +75,7 @@ Function Start-StatsToGraphite
             $samplePath = $sample.Path
             Write-Verbose "Sample Name: $samplePath"
         }
-        
+
         if ($sample.Path -notmatch [regex]$Config.Filters)
         {
             # Run the sample path through the ConvertTo-GraphiteMetric function
@@ -86,9 +86,9 @@ Function Start-StatsToGraphite
 
             # Build the full metric path
             $metricPath = $Config.MetricPath + '.' + $cleanNameOfSample
-      
+
             # Send To Graphite Server
-     
+
             # Use Verbose if Verbose output is enabled in the config file.
             if ($Config.ShowOutput)
             {
@@ -113,7 +113,7 @@ Function Start-StatsToGraphite
 
     # Reloads The Configuration File After the Loop so new counters can be added on the fly
     $Config = Import-XMLConfig -ConfigPath $configPath
-  
+
     if ($Config.ShowOutput)
     {
         # Write To Console How Long Execution Took
@@ -131,7 +131,7 @@ Function ConvertTo-GraphiteMetric
 
     .Description
         Converts Windows PerfMon metrics into a metric name that is suitable for a Graphite metric path.
-        
+
     .Parameter MetricToClean
         The metric to be cleaned.
 
@@ -148,27 +148,34 @@ Function ConvertTo-GraphiteMetric
     .Example
         PS> ConvertTo-GraphiteMetric -MetricToClean "\Processor(_Total)\% Processor Time" -RemoveUnderscores
             .Processor.Total.ProcessorTime
-        
+
     .Notes
         NAME:      ConvertTo-GraphiteMetric
         AUTHOR:    Matthew Hodgkins
         WEBSITE:   http://www.hodgkins.net.au
-#>           
-  param 
-  (            
+#>
+  param
+  (
    [CmdletBinding()]
-   [parameter(Mandatory=$true)]            
+   [parameter(Mandatory=$true)]
    [string]$MetricToClean,
 
-   [parameter(Mandatory=$false)]            
+   [parameter(Mandatory=$false)]
    [switch]$RemoveUnderscores,
 
-   [parameter(Mandatory=$false)]            
-   [switch]$NicePhysicalDisks 
+   [parameter(Mandatory=$false)]
+   [switch]$NicePhysicalDisks
   )
 
+  $cleanNameOfSample = $MetricToClean
+  # replace system name with the config file defined hostname if defined
+  if ($Config.Hostname)
+  {
+    $cleanNameOfSample = $cleanNameOfSample -replace [System.Net.Dns]::GetHostName(), $Config.Hostname
+  }
+
   # Removing Beginning Backslashes"
-  $cleanNameOfSample = $MetricToClean -replace '^\\\\', ''
+  $cleanNameOfSample = $cleanNameOfSample -replace '^\\\\', ''
 
   # Replacing Backslashes After ServerName With dot"
   $cleanNameOfSample = $cleanNameOfSample -replace '\\\\', '.'
@@ -202,7 +209,7 @@ Function ConvertTo-GraphiteMetric
 
   # Removing Double Dots"
   $cleanNameOfSample = $cleanNameOfSample -replace '\.\.', '.'
-  
+
   if ($RemoveUnderscores)
   {
     Write-Verbose "Removing Underscores as the switch is enabled"
@@ -215,10 +222,10 @@ Function ConvertTo-GraphiteMetric
 
     # Get Drive Letter
     $driveLetter = ([regex]'physicaldisk\.\d([a-zA-Z])').match($cleanNameOfSample).groups[1].value
-    
+
     # Add -drive to the drive letter
     $cleanNameOfSample = $cleanNameOfSample -replace 'physicaldisk\.\d([a-zA-Z])',('physicaldisk.' + $driveLetter + '-drive')
-    
+
     # Get the new cleaned drive letter
     $niceDriveLetter = ([regex]'physicaldisk\.(.*)\.avg\.').match($cleanNameOfSample).groups[1].value
 
@@ -230,26 +237,26 @@ Function ConvertTo-GraphiteMetric
 }
 
 function Send-GraphiteMetric
-{            
+{
 <#
     .Synopsis
         Sends Graphite Metrics to a Carbon server.
 
     .Description
         This function takes a metric, value and unix timestamp and sends it to a Graphite server.
-        
+
     .Parameter CarbonServer
         The Carbon server IP or address.
-    
+
     .Parameter CarbonServerPort
         The Carbon server port. Default is 2003.
 
     .Parameter MetricPath
         The Graphite formatted metric path. (Must contain no spaces).
-        
+
     .Parameter MetricValue
         The the value of the metric path you are sending.
-        
+
     .Parameter UnixTime
         The the unix time stamp of the metric being sent the Graphite Server.
 
@@ -259,43 +266,43 @@ function Send-GraphiteMetric
     .Example
         Send-GraphiteMetric -CarbonServer myserver.local -CarbonServerPort 2003 -MetricPath houston.servers.home.cpu.processortime -MetricValue 54 -UnixTime 1391141202
         This sends the houston.servers.home.cpu.processortime metric to the specified carbon server.
-        
+
     .Example
         Send-GraphiteMetric -CarbonServer myserver.local -CarbonServerPort 2003 -MetricPath houston.servers.home.cpu.processortime -MetricValue 54 -DateTime (Get-Date)
-        This sends the houston.servers.home.cpu.processortime metric to the specified carbon server.       
-        
+        This sends the houston.servers.home.cpu.processortime metric to the specified carbon server.
+
     .Notes
         NAME:      Send-GraphiteMetric
         AUTHOR:    Matthew Hodgkins
         WEBSITE:   http://www.hodgkins.net.au
 
-#>           
-  param 
-  (            
+#>
+  param
+  (
    [CmdletBinding(DefaultParametersetName='Date Object')]
-   [parameter(Mandatory=$true)]         
+   [parameter(Mandatory=$true)]
    [string]$CarbonServer,
-               
+
    [parameter(Mandatory=$false)]
-   [ValidateRange(1,65535)]           
+   [ValidateRange(1,65535)]
    [int]$CarbonServerPort = 2003,
-   
-   [parameter(Mandatory=$true)]         
+
+   [parameter(Mandatory=$true)]
    [string]$MetricPath,
-   
-   [parameter(Mandatory=$true)]            
+
+   [parameter(Mandatory=$true)]
    [string]$MetricValue,
-   
+
    [Parameter(Mandatory=$true,
               ParameterSetName='Epoch / Unix Time')]
-   [ValidateRange(1,99999999999999)] 
+   [ValidateRange(1,99999999999999)]
    [string]$UnixTime,
 
    [Parameter(Mandatory=$true,
               ParameterSetName='Date Object')]
    [datetime]$DateTime
-  )            
-  
+  )
+
   # If Received A DateTime Object - Convert To UnixTime
   if ($DateTime)
   {
@@ -309,35 +316,35 @@ function Send-GraphiteMetric
   Write-Verbose "Metric Received: $metric"
 
   #Stream results to the Carbon server
-  $socket = New-Object System.Net.Sockets.TCPClient 
-  $socket.connect($CarbonServer, $CarbonServerPort) 
-  $stream = $socket.GetStream() 
+  $socket = New-Object System.Net.Sockets.TCPClient
+  $socket.connect($CarbonServer, $CarbonServerPort)
+  $stream = $socket.GetStream()
   $writer = new-object System.IO.StreamWriter($stream)
 
   #Write out metric to the stream.
   $writer.WriteLine($metric)
   $writer.Flush() #Flush and write our metrics.
-  $writer.Close() 
-  $stream.Close()    
+  $writer.Close()
+  $stream.Close()
 }
 
-function Convert-TimeZone {            
+function Convert-TimeZone {
     <#
         .Synopsis
            Coverts from a given time zone to the specified time zone.
 
         .Description
             Coverts from a given time zone to the specified time zone.
-        
+
         .Parameter DateTime
             A DateTime object will be converted to the new time zone.
-    
-        .Parameter ToTimeZone    
+
+        .Parameter ToTimeZone
             The name of the target time zone you wish to convert to. You can get the names by using the -ListTimeZones parameter.
-        
+
         .Parameter ListTimeZones
             Lists all the time zones that can be used.
-    
+
         .Example
             Convert-TimeZone -ListTimeZones
 
@@ -359,9 +366,9 @@ function Convert-TimeZone {
 
         .Example
             Convert-TimeZone -DateTime (Get-Date) -ToTimeZone UTC
-            
+
             Converts current time to UTC time.
-                
+
         .Notes
             NAME:      Convert-TimeZone
             AUTHOR:    Matthew Hodgkins
@@ -369,30 +376,30 @@ function Convert-TimeZone {
 
     #>
 
-    param 
-    (            
+    param
+    (
         [CmdletBinding(DefaultParametersetName='Convert Time Zone')]
 
         [Parameter(Mandatory=$true,
-                   ParameterSetName='Convert Time Zone')]            
+                   ParameterSetName='Convert Time Zone')]
         [ValidateNotNull()]
         [ValidateNotNullOrEmpty()]
         [datetime]$DateTime,
-        
+
         [Parameter(Mandatory=$true,
-                   ParameterSetName='Convert Time Zone')]           
+                   ParameterSetName='Convert Time Zone')]
         [ValidateNotNull()]
         [ValidateNotNullOrEmpty()]
         # Commenting Out As There Is A Problem on Windows 2003
-        #[ValidateScript({([System.TimeZoneInfo]::GetSystemTimeZones().id) -eq $_})]        
+        #[ValidateScript({([System.TimeZoneInfo]::GetSystemTimeZones().id) -eq $_})]
         [string]$ToTimeZone,
 
         [Parameter(Mandatory=$false,
-                   ParameterSetName='List Time Zones')]                
+                   ParameterSetName='List Time Zones')]
         [switch]$ListTimeZones
-    )  
-    
-    # Loading dll for Windows 2003 R2 
+    )
+
+    # Loading dll for Windows 2003 R2
     [void][System.Reflection.Assembly]::LoadWithPartialName('System.Core')
 
     # List TimeZones for the user
@@ -400,23 +407,23 @@ function Convert-TimeZone {
     {
         [System.TimeZoneInfo]::GetSystemTimeZones()
     }
-    
+
     # Run the Function
     else
     {
-        $TimeZoneObject = [System.TimeZoneInfo]::GetSystemTimeZones() | Where-Object { $_.id -eq $ToTimeZone }            
-           
-        $TargetZoneTime  = [System.TimeZoneInfo]::ConvertTime($DateTime, $TimeZoneObject)            
+        $TimeZoneObject = [System.TimeZoneInfo]::GetSystemTimeZones() | Where-Object { $_.id -eq $ToTimeZone }
 
-        $OutObject = New-Object -TypeName PSObject -Property @{            
-            LocalTime  = $DateTime            
-            LocalTimeZone = $(([System.TimeZoneInfo]::LOCAL).id)            
-            TargetTime  = $TargetZoneTime            
-            TargetTimeZone = $($TimeZoneObject.id)            
+        $TargetZoneTime  = [System.TimeZoneInfo]::ConvertTime($DateTime, $TimeZoneObject)
+
+        $OutObject = New-Object -TypeName PSObject -Property @{
+            LocalTime  = $DateTime
+            LocalTimeZone = $(([System.TimeZoneInfo]::LOCAL).id)
+            TargetTime  = $TargetZoneTime
+            TargetTimeZone = $($TimeZoneObject.id)
         }
-  
+
         Write-Output $OutObject
-    }          
+    }
 }
 
 Function Import-XMLConfig
@@ -427,36 +434,36 @@ Function Import-XMLConfig
 
     .Description
         Loads the XML Config File for Send-StatsToGraphite.
-        
+
     .Parameter ConfigPath
         Full path to the configuration XML file.
-        
+
     .Example
         Import-XMLConfig -ConfigPath C:\Stats\Send-PowerShellGraphite.ps1
-                
+
     .Notes
         NAME:      Convert-TimeZone
         AUTHOR:    Matthew Hodgkins
         WEBSITE:   http://www.hodgkins.net.au
 
 #>
-   [CmdletBinding()]
-   Param
-   (
+  [CmdletBinding()]
+  Param
+  (
     # Configuration File Path
     [Parameter(Mandatory=$true)]
     $ConfigPath
-   )
+  )
 
-  [hashtable]$Config = @{} 
-   
+  [hashtable]$Config = @{}
+
   # Load Configuration File
   $xmlfile = [xml](Get-Content $configPath)
-    
+
   #Set the Graphite carbon server location and port number
   $Config.CarbonServer = $xmlfile.Configuration.Graphite.CarbonServer
   $Config.CarbonServerPort = $xmlfile.Configuration.Graphite.CarbonServerPort
-  
+
   #Get Metric Send Interval From Config
   [int]$Config.MetricSendIntervalSeconds = $xmlfile.Configuration.Graphite.MetricSendIntervalSeconds
 
@@ -465,17 +472,22 @@ Function Import-XMLConfig
 
   # Convert Interval into TimeSpan
   $Config.MetricTimeSpan = [timespan]::FromSeconds($Config.MetricSendIntervalSeconds)
-  
-  # What is the metric path
 
+  # What is the metric path
   $Config.MetricPath = $xmlfile.Configuration.Graphite.MetricPath
-  
+
+  # if hostname is defined allow an override hostname vs. using system name
+  if ($xmlfile.Configuration.Graphite.Hostname)
+  {
+    $Config.Hostname = $xmlfile.Configuration.Graphite.Hostname
+  }
+
   # Convert Value in Configuration File to Bool for showing Verbose Output
   [bool]$Config.ShowOutput = [System.Convert]::ToBoolean($xmlfile.Configuration.Logging.VerboseOutput)
-  
+
   # Create the Performance Counters Array
   $Config.Counters = @()
-  
+
   # Load each row from the configuration file into the counter array
   ForEach ($counter in $xmlfile.Configuration.PerformanceCounters.Counter)
   {
@@ -501,6 +513,6 @@ Function Import-XMLConfig
   {
      $Config.Filters = 'nothingwillevermatchthishugestring'
   }
-  
+
   Return $Config
 }
