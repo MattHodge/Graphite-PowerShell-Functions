@@ -81,7 +81,7 @@ Function Start-StatsToGraphite
             # Run the sample path through the ConvertTo-GraphiteMetric function
             $cleanNameOfSample = ConvertTo-GraphiteMetric -MetricToClean $sample.Path -RemoveUnderscores -NicePhysicalDisks
 
-            $DebugOut = 'Job Exceution Time To Get to Clean Metrics: ' + ((Get-Date) - $lastRunTime).TotalSeconds + ' seconds'
+            $DebugOut = 'Job Execution Time To Get to Clean Metrics: ' + ((Get-Date) - $lastRunTime).TotalSeconds + ' seconds'
             Write-Verbose $DebugOut
 
             # Build the full metric path
@@ -101,7 +101,7 @@ Function Start-StatsToGraphite
             Send-GraphiteMetric -CarbonServer $Config.CarbonServer -CarbonServerPort $Config.CarbonServerPort -MetricPath $metricPath -MetricValue $sample.Cookedvalue -DateTime $convertedTime
             }
 
-            $DebugOut = 'Job Exceution Time To Get to Clean Metrics: ' + ((Get-Date) - $lastRunTime).TotalSeconds + ' seconds'
+            $DebugOut = 'Job Execution Time To Get to Clean Metrics: ' + ((Get-Date) - $lastRunTime).TotalSeconds + ' seconds'
             Write-Verbose $DebugOut
         }
 
@@ -116,8 +116,8 @@ Function Start-StatsToGraphite
   
     if ($Config.ShowOutput)
     {
-        # Write To Console How Long Execuption Took
-        $VerboseOutPut = 'PerfMon Job Exceution Time: ' + ((Get-Date) - $lastRunTime).TotalSeconds + ' seconds'
+        # Write To Console How Long Execution Took
+        $VerboseOutPut = 'PerfMon Job Execution Time: ' + ((Get-Date) - $lastRunTime).TotalSeconds + ' seconds'
         Write-Output $VerboseOutPut
     }
   }
@@ -306,7 +306,7 @@ function Send-GraphiteMetric
   # Create Send-To-Graphite Metric
   $metric = $MetricPath + " " + $MetricValue + " " + $UnixTime
 
-  Write-Verbose "Metric Recevied: $metric"
+  Write-Verbose "Metric Received: $metric"
 
   #Stream results to the Carbon server
   $socket = New-Object System.Net.Sockets.TCPClient 
@@ -355,7 +355,7 @@ function Convert-TimeZone {
             BaseUtcOffset              : -11:00:00
             SupportsDaylightSavingTime : False
 
-            Lists avaliable time zones to convert to.
+            Lists available time zones to convert to.
 
         .Example
             Convert-TimeZone -DateTime (Get-Date) -ToTimeZone UTC
