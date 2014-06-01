@@ -63,13 +63,15 @@ SQLQueryTimeoutSeconds | The time out period when waiting for a SQL query to ret
 
 Under that you can configure a list of SQL servers and the queries that will be run against those servers. You can add as many queries or servers as required. The only constraint is that they all need to be able to run within the time given by the **MetricSendIntervalSeconds** configuration value.
 
-`<SQLServer>` Configuration Value | Description
+`<SQLServer>` Configuration Values | Description
 --- | ---
 ServerInstance | The hostname or Server Instance of the SQL server you want to connect to. SQL servers with instances can also be used.
 Username | The username to connect to SQL with using SQL Authentication. Leaving this and the *Password* option blank will make the script use Windows Authentication against the SQL Server. The current credentials that the PowerShell window are running under will be used.
 Password | The password to connect to SQL with using SQL Authentication. Leaving this and the *Username* option blank will make the script use Windows Authentication against the SQL Server. The current credentials that the PowerShell window are running under will be used.
 
-`<Query>` Configuration Value | Description
+The next part of the configuration allows you to add a list of the T-SQL queries that will be run against the SQL server.
+
+`<Query>` Configuration Values | Description
 --- | ---
 Database | The database that the SQL query will be run against.
 MetricName | The Graphite metric name to use for this SQL query.
@@ -77,11 +79,14 @@ TSQL | The T-SQL query to run against the SQL Server. If you need to use charact
 
 There are a few important things to keep in mind when using this feature.
 
-* If you provide a SQL Username and Password it is stored in plain text in the configuration file. If you do not provide a username and password, the windows account that the PowerShell window is running under will be used against the SQL Server. This is a good way to protect the credentials.
+* If you provide the SQL **Username** and **Password** options, they is stored in plain text in the configuration file. If you do not provide a username and password, the windows account that the PowerShell window is running under will be used against the SQL Server. This is a good way to protect the credentials.
 * There is no verification that the SQL command in the configuration file is not destructive. Be sure to use a low privilege account to authenticate against SQL so that any malicious T-SQL queries destroy your data.
-* If your SQL query returns multiple results, only the first one will be used.
+* If your T-SQL query returns multiple results, only the first one will be sent over to Graphite.
 
 #### Logging Configuration Section
+
+This section allows you to turn on or off Verbose output. This is useful when testing but is better left off when running as a service.
+
 Configuration Name | Description
 --- | ---
 VerboseOutput | Will provide each of the metrics that were sent over to Carbon and the total execution time of the loop.
@@ -114,7 +119,7 @@ The following shows how to use the `Start-SQLStatsToGraphite`, which execute any
 
 ## Installing as a Service
 
-Once you have edited the configuration file and verified it is functioning correctly by running `Start-StatsToGraphite` in an interactive PowerShell session, you might want to install the script as a service.
+Once you have edited the configuration file and verified everything is functioning correctly by running either `Start-StatsToGraphite` or `Start-SQLStatsToGraphite` in an interactive PowerShell session, you might want to install one or both of these scripts as a service.
 
 The easiest way to achieve this is using NSSM - the Non-Sucking Service Manager.
 
@@ -128,13 +133,29 @@ The easiest way to achieve this is using NSSM - the Non-Sucking Service Manager.
 5. Make sure the service is started and it is set to Automatic
 6. Check your Graphite server and make sure the metrics are coming in
 
+The below configurations will show how to run either `Start-StatsToGraphite` or `Start-SQLStatsToGraphite` as a service. If you want to run both on the same server, you will need to create two seperate services, one for each script.
+
+### Running Start-StatsToGraphite as a Service
+
+The following configuration can be used to run `Start-StatsToGraphite` as a service. 
+
 Setting Name | Value
 --- | ---
 Path | C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
 Startup Directory | C:\GraphitePowerShell
 Options | -command "& { . C:\GraphitePowerShell\Graphite-PowerShell.ps1; Start-StatsToGraphite }"
 
-If you want to remove the service, read the NSSM documentation [http://nssm.cc/commands](http://nssm.cc/commands).
+### Running Start-SQLStatsToGraphite as a Service
+
+The following configuration can be used to run `Start-SQLStatsToGraphite` as a service. 
+
+Setting Name | Value
+--- | ---
+Path | C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Startup Directory | C:\GraphitePowerShell
+Options | -command "& { . C:\GraphitePowerShell\Graphite-PowerShell.ps1; Start-SQLStatsToGraphite }"
+
+If you want to remove a service, read the NSSM documentation [http://nssm.cc/commands](http://nssm.cc/commands).
 
 ### Installing as a Service Using PowerShell
 1. Download nssm from [nssm.cc](http://nssm.cc) and save it into your `C:\GraphitePowerShell` directory
@@ -151,7 +172,8 @@ For full help for these functions run the PowerShell command `Get-Help | <Functi
 
 Function Name | Description
 --- | ---
-Start-StatsToGraphite | The main function. This is an endless loop which will send metrics to Graphite. 
+Start-StatsToGraphite | The function to collect Windows Performance Counters. This is an endless loop which will send metrics to Graphite. 
+Start-SQLStatsToGraphite | The function to query SQL. This is an endless loop which will send metrics to Graphite. 
 ConvertTo-GraphiteMetric | Takes the Windows Performance counter name and coverts it to something that Graphite can use.
 Send-GraphiteMetric | Allows you to send metrics to Graphite in an ad-hoc manner.
 Convert-TimeZone | Converts from one time zone to another.
