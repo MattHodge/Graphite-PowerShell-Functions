@@ -6,12 +6,15 @@ More details at [http://www.hodgkins.net.au/mswindows/using-powershell-to-send-m
 
 ## Features
 
-* Sends Stats to Graphite's Carbon daemon using UDP
-* Will convert time zones. If your the server you want the metrics sent from is in a different time zone than your Graphite server, the script will convert the time so metrics come in with a time that matches the Graphite server.
-* All configuration can be done in XML file
+* Sends Metrics to Graphite's Carbon daemon using UDP
+* Can collect Windows Performance Counters
+* Can collect values by using T-SQL queries against MS SQL databases
+* Will convert time zones. If your the server you want the metrics sent from is in a different time zone than your Graphite server, the script will convert the time so metrics come in with a time that matches the Graphite serve
+* All configuration can be done from a simple XML file
 * Reloads the XML file automatically, so if more counters are added, next send interval, the script will pick up and changes or additional counters you added and start sending metrics for them to Graphite
 * Additional functions are exposed that allow you to send data to Graphite from PowerShell easily. [Here](#functions) is a list of included functions.
 * Can be run as a service
+* Installable by Chef. Cookbook [https://github.com/tas50/chef-graphite_powershell_functions](available here)
 
 ## Installation
 
