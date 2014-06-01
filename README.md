@@ -10,7 +10,7 @@ More details at [http://www.hodgkins.net.au/mswindows/using-powershell-to-send-m
 * Will convert time zones. If your the server you want the metrics sent from is in a different time zone than your Graphite server, the script will convert the time so metrics come in with a time that matches the Graphite server.
 * All configuration can be done in XML file
 * Reloads the XML file automatically, so if more counters are added, next send interval, the script will pick up and changes or additional counters you added and start sending metrics for them to Graphite
-* Additonal functions are exposed that allow you to send data to Graphite from PowerShell easily. [Here](#functions) is a list of included functions.
+* Additional functions are exposed that allow you to send data to Graphite from PowerShell easily. [Here](#functions) is a list of included functions.
 * Can be run as a service
 
 ## Installation
@@ -25,7 +25,7 @@ More details at [http://www.hodgkins.net.au/mswindows/using-powershell-to-send-m
 1. In PowerShell, enter the directory the you downloaded the script, and dot source it `. .\Graphite-PowerShell.ps1`
 2. Start the script by using the function `Start-StatsToGraphite`. If you want Verbose detailed use `Start-StatsToGraphite -Verbose`.
 
-You may need to run the PowerShell instance with Administrative rights depending on the performace counters you want to access. This is due to the scripts use of the `Get-Counter` CmdLet. 
+You may need to run the PowerShell instance with Administrative rights depending on the performance counters you want to access. This is due to the scripts use of the `Get-Counter` CmdLet. 
 
 From the [Get-Counter help page on TechNet](http://technet.microsoft.com/library/963e9e51-4232-4ccf-881d-c2048ff35c2a(v=wps.630).aspx):
 
@@ -33,7 +33,7 @@ From the [Get-Counter help page on TechNet](http://technet.microsoft.com/library
 
 This is what the verbose output looks like when it is turned on in the XML configuration file.
 
-![alt text](http://i.imgur.com/G3pwnhf.jpg "Verbse")
+![alt text](http://i.imgur.com/G3pwnhf.jpg "Verbose")
 
 That is all there is too getting your metrics into Graphite.
 
@@ -74,9 +74,9 @@ VerboseOutput | Will provide each of the metrics that were sent over to Carbon a
 
 ## Installing as a Service
 
-Once you have edited the configuration file and verifed it is functioning correctly by running `Start-StatsToGraphite` in an interactive PowerShell session, you might want to install the script as a service.
+Once you have edited the configuration file and verified it is functioning correctly by running `Start-StatsToGraphite` in an interactive PowerShell session, you might want to install the script as a service.
 
-The easiest way to achive this is using NSSM - the Non-Sucking Service Manager.
+The easiest way to achieve this is using NSSM - the Non-Sucking Service Manager.
 
 1. Download nssm from [nssm.cc](http://nssm.cc)
 2. Open up an Administrative command prompt and run `nssm install GraphitePowerShell`. (You can call the service whatever you want).
