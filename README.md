@@ -107,9 +107,9 @@ From the [Get-Counter help page on TechNet](http://technet.microsoft.com/library
 
 > Performance counters are often protected by access control lists (ACLs). To get all available performance counters, open Windows PowerShell with the "Run as administrator" option.
 
-This is what the verbose output looks like when it is turned on in the XML configuration file.
+This is what `Start-StatsToGraphite` like with **VerboseOutput** turned on in the XML configuration file.
 
-![alt text](http://i.imgur.com/G3pwnhf.jpg "Verbose")
+![alt text](http://i.imgur.com/G3pwnhf.jpg "Start-StatsToGraphite with Verbose Output")
 
 That is all there is too getting your Windows performance counters into Graphite.
 
@@ -119,6 +119,10 @@ The following shows how to use the `Start-SQLStatsToGraphite`, which execute any
 
 1. In PowerShell, enter the directory the you downloaded the script, and dot source it `. .\Graphite-PowerShell.ps1`
 2. Start the script by using the function `Start-SQLStatsToGraphite`. If you want Verbose detailed use `Start-SQLStatsToGraphite -Verbose`. If you want to see what would be sent to Graphite, without actually sending the metrics, use `Start-SQLStatsToGraphite -Verbose -TestMode`
+
+This is what `Start-SQLStatsToGraphite` like with **VerboseOutput** turned on in the XML configuration file.
+
+![alt text](http://i.imgur.com/aFVttVg.jpg "Start-SQLStatsToGraphite with Verbose Output")
 
 ## Installing as a Service
 
