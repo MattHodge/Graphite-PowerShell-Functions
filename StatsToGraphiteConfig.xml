@@ -41,7 +41,7 @@
             <!-- A SQL Server Connection Using Windows Authentication. The credentials from the running PowerShell session will be used. -->
 			<SQLServer ServerInstance="MSSQLServer" Username="" Password="">
 				<Query Database="citydb" MetricName="citydb.cities.navadwipkota" TSQL="Select COUNT (city) from [dbo].[cities] Where City = 'Navadwip' OR City = 'Kota'"/>
-                <!-- An example query SQL query using a greater-than symbol. The symbol must be replaced with an XML Entity Referance. List here - http://msdn.microsoft.com/en-us/library/windows/desktop/dd892769%28v=vs.85%29.aspx -->
+                <!-- An example query SQL query using a greater-than symbol. The symbol must be replaced with an XML Entity Reference. List here - http://msdn.microsoft.com/en-us/library/windows/desktop/dd892769%28v=vs.85%29.aspx -->
                 <Query Database="addressbook" MetricName="people.ages.over30" TSQL="Select COUNT (personid) from [dbo].[tblAddressBook] Where Age &gt; 30"/>
 			</SQLServer>
 		</SQLServers>
