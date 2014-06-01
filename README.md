@@ -14,7 +14,7 @@ More details at [http://www.hodgkins.net.au/mswindows/using-powershell-to-send-m
 * Reloads the XML configuration file automatically. For example, if more counters are added to the configuration file, the script will notice and start sending metrics for them to Graphite in the next send interval
 * Additional functions are exposed that allow you to send data to Graphite from PowerShell easily. [Here](#functions) is the list of included functions
 * Script can be installed to run as a service
-* Installable by Chef Cookbook [https://github.com/tas50/chef-graphite_powershell_functions/](which is available here)
+* Installable by Chef Cookbook [which is available here](https://github.com/tas50/chef-graphite_powershell_functions/)
 
 ## Installation
 
