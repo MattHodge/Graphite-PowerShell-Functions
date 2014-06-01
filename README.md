@@ -20,23 +20,6 @@ More details at [http://www.hodgkins.net.au/mswindows/using-powershell-to-send-m
 3. Modify *StatsToGraphiteConfig.xml* configuration file. Instructions [here](#config).
 4. Open PowerShell and ensure you set your Execution Policy to allow scripts be run, for example `Set-ExecutionPolicy RemoteSigned`.
 
-## Usage
-
-1. In PowerShell, enter the directory the you downloaded the script, and dot source it `. .\Graphite-PowerShell.ps1`
-2. Start the script by using the function `Start-StatsToGraphite`. If you want Verbose detailed use `Start-StatsToGraphite -Verbose`.
-
-You may need to run the PowerShell instance with Administrative rights depending on the performance counters you want to access. This is due to the scripts use of the `Get-Counter` CmdLet. 
-
-From the [Get-Counter help page on TechNet](http://technet.microsoft.com/library/963e9e51-4232-4ccf-881d-c2048ff35c2a(v=wps.630).aspx):
-
-> Performance counters are often protected by access control lists (ACLs). To get all available performance counters, open Windows PowerShell with the "Run as administrator" option.
-
-This is what the verbose output looks like when it is turned on in the XML configuration file.
-
-![alt text](http://i.imgur.com/G3pwnhf.jpg "Verbose")
-
-That is all there is too getting your metrics into Graphite.
-
 ### Modifying the Configuration File
 
 The configuration file is fairly self-explanatory, but here is a description for each of the values.
@@ -67,10 +50,67 @@ Here are some other examples:
 
 This section lists names you want to filter out of the Performance Counter list. This is useful when you want to use a wildcard in the performance counter, want to skip some of the returned counters. I have included *isatap* and *teredo tunneling* by default to filter out IPv6 interfaces. Remove all <MetricFilter> tags if you want no filtering.
 
+#### MSSQLMetics Configuration Section
+
+This section allows you to configure the additional settings that will be used when running the `Start-SQLStatsToGraphite` command.
+
+Configuration Name | Description
+--- | ---
+MetricPath | The path of the SQL metric you want to be sent to the server
+MetricSendIntervalSeconds | The interval to send SQL metrics to Carbon. I recommend 5 seconds or greater. The more queries you are running the longer it takes to send them to the Graphite server. You can see how long it takes to send the metrics each time the loop runs by using running the `Start-SQLStatsToGraphite -Verbose -TestMode`.
+SQLConnectionTimeoutSeconds | The time out period when attempting to connect to the SQL Server.
+SQLQueryTimeoutSeconds | The time out period when waiting for a SQL query to return.
+
+Under that you can configure a list of SQL servers and the queries that will be run against those servers. You can add as many queries or servers as required. The only constraint is that they all need to be able to run within the time given by the **MetricSendIntervalSeconds** configuration value.
+
+`<SQLServer>` Configuration Value | Description
+--- | ---
+ServerInstance | The hostname or Server Instance of the SQL server you want to connect to. SQL servers with instances can also be used.
+Username | The username to connect to SQL with using SQL Authentication. Leaving this and the *Password* option blank will make the script use Windows Authentication against the SQL Server. The current credentials that the PowerShell window are running under will be used.
+Password | The password to connect to SQL with using SQL Authentication. Leaving this and the *Username* option blank will make the script use Windows Authentication against the SQL Server. The current credentials that the PowerShell window are running under will be used.
+
+`<Query>` Configuration Value | Description
+--- | ---
+Database | The database that the SQL query will be run against.
+MetricName | The Graphite metric name to use for this SQL query.
+TSQL | The T-SQL query to run against the SQL Server. If you need to use characters such as `<` or `>` in your query, you will need to replace them with the appropriate XML entity reference. For example, `>` would be replaced with `&gt;`. A full list of these can be found [on MSDN](http://msdn.microsoft.com/en-us/library/windows/desktop/dd892769%28v=vs.85%29.aspx).
+
+There are a few important things to keep in mind when using this feature.
+
+* If you provide a SQL Username and Password it is stored in plain text in the configuration file. If you do not provide a username and password, the windows account that the PowerShell window is running under will be used against the SQL Server. This is a good way to protect the credentials.
+* There is no verification that the SQL command in the configuration file is not destructive. Be sure to use a low privilege account to authenticate against SQL so that any malicious T-SQL queries destroy your data.
+* If your SQL query returns multiple results, only the first one will be used.
+
 #### Logging Configuration Section
 Configuration Name | Description
 --- | ---
 VerboseOutput | Will provide each of the metrics that were sent over to Carbon and the total execution time of the loop.
+
+## Usage - Windows Performance Counters
+
+The following shows how to use the `Start-StatsToGraphite`, which will collect Windows performance counters and send them to Graphite.
+
+1. In PowerShell, enter the directory the you downloaded the script, and dot source it `. .\Graphite-PowerShell.ps1`
+2. Start the script by using the function `Start-StatsToGraphite`. If you want Verbose detailed use `Start-StatsToGraphite -Verbose`.
+
+You may need to run the PowerShell instance with Administrative rights depending on the performance counters you want to access. This is due to the scripts use of the `Get-Counter` CmdLet. 
+
+From the [Get-Counter help page on TechNet](http://technet.microsoft.com/library/963e9e51-4232-4ccf-881d-c2048ff35c2a(v=wps.630).aspx):
+
+> Performance counters are often protected by access control lists (ACLs). To get all available performance counters, open Windows PowerShell with the "Run as administrator" option.
+
+This is what the verbose output looks like when it is turned on in the XML configuration file.
+
+![alt text](http://i.imgur.com/G3pwnhf.jpg "Verbose")
+
+That is all there is too getting your Windows performance counters into Graphite.
+
+## Usage - SQL Query Results
+
+The following shows how to use the `Start-SQLStatsToGraphite`, which execute any SQL queries listed in the configuration file and send the result (which needs to be an integer) to Graphite.
+
+1. In PowerShell, enter the directory the you downloaded the script, and dot source it `. .\Graphite-PowerShell.ps1`
+2. Start the script by using the function `Start-SQLStatsToGraphite`. If you want Verbose detailed use `Start-SQLStatsToGraphite -Verbose`. If you want to see what would be sent to Graphite, without actually sending the metrics, use `Start-SQLStatsToGraphite -Verbose -TestMode`
 
 ## Installing as a Service
 
