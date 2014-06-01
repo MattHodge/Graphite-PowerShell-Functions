@@ -127,6 +127,11 @@ The below image is what `Start-SQLStatsToGraphite` like with **VerboseOutput** t
 
 ![alt text](http://i.imgur.com/aFVttVg.jpg "Start-SQLStatsToGraphite with Verbose Output")
 
+This function requires the Microsoft SQL PowerShell Modules/SnapIns. The easiest way to get these is to download them from the [SQL 2012 R2 SP1 Feature Pack](http://www.microsoft.com/en-us/download/details.aspx?id=35580). You will need to grab the following:
+* Microsoft® SQL Server® 2012 Shared Management Object
+* Microsoft® System CLR Types for Microsoft® SQL Server® 2012 
+* Microsoft® Windows PowerShell Extensions for Microsoft® SQL Server® 2012
+
 ## Installing as a Service
 
 Once you have edited the configuration file and verified everything is functioning correctly by running either `Start-StatsToGraphite` or `Start-SQLStatsToGraphite` in an interactive PowerShell session, you might want to install one or both of these scripts as a service.
@@ -184,6 +189,7 @@ Function Name | Description
 --- | ---
 Start-StatsToGraphite | The function to collect Windows Performance Counters. This is an endless loop which will send metrics to Graphite. 
 Start-SQLStatsToGraphite | The function to query SQL. This is an endless loop which will send metrics to Graphite. 
+Send-GraphiteEvent | Sends an event to Graphite using the Graphite Event API. More information about the events API can be found [in this blog post](http://obfuscurity.com/2014/01/Graphite-Tip-A-Better-Way-to-Store-Events).
 ConvertTo-GraphiteMetric | Takes the Windows Performance counter name and coverts it to something that Graphite can use.
 Send-GraphiteMetric | Allows you to send metrics to Graphite in an ad-hoc manner.
 Convert-TimeZone | Converts from one time zone to another.
