@@ -188,7 +188,7 @@ Function Start-SQLStatsToGraphite
 		Import-Module SQLPS
 	}
 	# Check for the PS SQL SnapIn
-	elseif ((Test-Path ($env:ProgramFiles + '\Microsoft SQL Server\100\Tools\Binn\Microsoft.SqlServer.Management.PSProvider.dll')) -or (Test-Path (${ env:ProgramFiles(x86) } + '\Microsoft SQL Server\100\Tools\Binn\Microsoft.SqlServer.Management.PSProvider.dll')))
+	elseif ((Test-Path ($env:ProgramFiles + '\Microsoft SQL Server\100\Tools\Binn\Microsoft.SqlServer.Management.PSProvider.dll')) -or (Test-Path ($env:ProgramFiles + ' (x86)' + '\Microsoft SQL Server\100\Tools\Binn\Microsoft.SqlServer.Management.PSProvider.dll')))
 	{
 		# Load The SQL SnapIns
 		Add-PSSnapin SqlServerCmdletSnapin100
