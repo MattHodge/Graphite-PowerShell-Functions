@@ -67,6 +67,8 @@ Function Start-StatsToGraphite
 		# Round Time to Nearest Time Period
 		$convertedTime = $convertedTime.AddSeconds(- ($convertedTime.Second % $Config.MetricSendIntervalSeconds))
 		
+		$metricsToSend = @{}
+
 		# Loop Through All The Counters
 		ForEach ($sample in $samples)
 		{
@@ -87,19 +89,7 @@ Function Start-StatsToGraphite
 				# Build the full metric path
 				$metricPath = $Config.MetricPath + '.' + $cleanNameOfSample
 				
-				# Send To Graphite Server
-				
-				# Use Verbose if Verbose output is enabled in the config file.
-				if ($Config.ShowOutput)
-				{
-					Send-GraphiteMetric -CarbonServer $Config.CarbonServer -CarbonServerPort $Config.CarbonServerPort -MetricPath $metricPath -MetricValue $sample.Cookedvalue -DateTime $convertedTime -Verbose
-				}
-				
-				# If config value is not set, don't run command with Verbose switch
-				else
-				{
-					Send-GraphiteMetric -CarbonServer $Config.CarbonServer -CarbonServerPort $Config.CarbonServerPort -MetricPath $metricPath -MetricValue $sample.Cookedvalue -DateTime $convertedTime
-				}
+				$metricsToSend[$metricPath] = $sample.Cookedvalue
 				
 				$DebugOut = 'Job Execution Time To Get to Clean Metrics: ' + ((Get-Date) - $lastRunTime).TotalSeconds + ' seconds'
 				Write-Verbose $DebugOut
@@ -109,6 +99,20 @@ Function Start-StatsToGraphite
 			{
 				Write-Verbose "Filtering out Sample Name: $samplePath as it matches something in the filters"
 			}
+		}
+
+		# Send To Graphite Server
+		
+		# Use Verbose if Verbose output is enabled in the config file.
+		if ($Config.ShowOutput)
+		{
+			Send-BulkGraphiteMetrics -CarbonServer $Config.CarbonServer -CarbonServerPort $Config.CarbonServerPort -Metrics $metricsToSend -DateTime $convertedTime -Verbose
+		}
+		
+		# If config value is not set, don't run command with Verbose switch
+		else
+		{
+			Send-BulkGraphiteMetrics -CarbonServer $Config.CarbonServer -CarbonServerPort $Config.CarbonServerPort -Metrics $metricsToSend -DateTime $convertedTime
 		}
 		
 		# Reloads The Configuration File After the Loop so new counters can be added on the fly
@@ -532,6 +536,113 @@ function Send-GraphiteMetric
 			
 			#Write out metric to the stream.
 			$writer.WriteLine($metric)
+			$writer.Flush() #Flush and write our metrics.
+			$writer.Close()
+			$stream.Close()
+		}
+		catch
+		{
+			Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file"
+		}
+	}
+}
+
+function Send-BulkGraphiteMetrics
+{
+<#
+    .Synopsis
+        Sends several Graphite Metrics to a Carbon server with one request. Bulk requests save a lot of resources for Graphite server.
+
+    .Description
+        This function takes array of hashes (MetricPath => MetricValue) and Unix timestamp and sends them to a Graphite server.
+        
+    .Parameter CarbonServer
+        The Carbon server IP or address.
+    
+    .Parameter CarbonServerPort
+        The Carbon server port. Default is 2003.
+
+    .Parameter Metrics
+        Array of hashes (MetricPath => MetricValue).
+        
+    .Parameter UnixTime
+        The the unix time stamp of the metrics being sent the Graphite Server.
+
+    .Parameter DateTime
+        The DateTime object of the metrics being sent the Graphite Server. This does a direct conversion to Unix time without accounting for Time Zones. If your PC time zone does not match your Graphite servers time zone the metric will appear on the incorrect time.
+
+    .Example
+        Send-BulkGraphiteMetrics -CarbonServer myserver.local -CarbonServerPort 2003 -Metrics @{"houston.servers.webserver01.cpu.processortime" = 54; "houston.servers.webserver02.cpu.processortime" = 43} -UnixTime 1391141202
+        This sends the houston.servers.webserver0*.cpu.processortime metrics to the specified carbon server.
+        
+    .Example
+        Send-BulkGraphiteMetrics -CarbonServer myserver.local -CarbonServerPort 2003 -Metrics @{"houston.servers.webserver01.cpu.processortime" = 54; "houston.servers.webserver02.cpu.processortime" = 43} -DateTime (Get-Date)
+        This sends the houston.servers.webserver0*.cpu.processortime metrics to the specified carbon server.       
+        
+    .Notes
+        NAME:      Send-BulkGraphiteMetrics
+        AUTHOR:    Alexey Kirpichnikov
+
+#>
+	param
+	(
+		[CmdletBinding(DefaultParametersetName = 'Date Object')]
+		[parameter(Mandatory = $true)]
+		[string]$CarbonServer,
+		
+		[parameter(Mandatory = $false)]
+		[ValidateRange(1, 65535)]
+		[int]$CarbonServerPort = 2003,
+		
+		[parameter(Mandatory = $true)]
+		[hashtable]$Metrics,
+		
+		[Parameter(Mandatory = $true,
+				   ParameterSetName = 'Epoch / Unix Time')]
+		[ValidateRange(1, 99999999999999)]
+		[string]$UnixTime,
+		
+		[Parameter(Mandatory = $true,
+				   ParameterSetName = 'Date Object')]
+		[datetime]$DateTime,
+		
+		# Will Display what will be sent to Graphite but not actually send it
+		[Parameter(Mandatory = $false)]
+		[switch]$TestMode
+	)
+	
+	# If Received A DateTime Object - Convert To UnixTime
+	if ($DateTime)
+	{
+		# Convert to a Unix time without any rounding
+		$UnixTime = (Get-Date $DateTime -UFormat %s) -Replace ("[,\.]\d*", "")
+	}
+	
+	# Create Send-To-Graphite Metric
+	$metricStrings = @()
+	foreach ($key in $Metrics.Keys)
+	{
+		$metricStrings += $key + " " + $Metrics[$key] + " " + $UnixTime
+	
+        Write-Verbose ("Metric Received: " + $metricStrings[-1])
+	}
+	
+	# Do not send if TestMode enabled
+	if (!($TestMode))
+	{
+		try
+		{
+			#Stream results to the Carbon server
+			$socket = New-Object System.Net.Sockets.TCPClient
+			$socket.connect($CarbonServer, $CarbonServerPort)
+			$stream = $socket.GetStream()
+			$writer = new-object System.IO.StreamWriter($stream)
+			
+			#Write out metrics to the stream.
+			foreach ($metricString in $metricStrings)
+			{
+				$writer.WriteLine($metricString)
+			}
 			$writer.Flush() #Flush and write our metrics.
 			$writer.Close()
 			$stream.Close()
