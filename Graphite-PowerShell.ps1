@@ -554,7 +554,7 @@ function Send-BulkGraphiteMetrics
         Sends several Graphite Metrics to a Carbon server with one request. Bulk requests save a lot of resources for Graphite server.
 
     .Description
-        This function takes array of hashes (MetricPath => MetricValue) and Unix timestamp and sends them to a Graphite server.
+        This function takes hashtable (MetricPath => MetricValue) and Unix timestamp and sends them to a Graphite server.
         
     .Parameter CarbonServer
         The Carbon server IP or address.
@@ -563,7 +563,7 @@ function Send-BulkGraphiteMetrics
         The Carbon server port. Default is 2003.
 
     .Parameter Metrics
-        Array of hashes (MetricPath => MetricValue).
+        Hashtable (MetricPath => MetricValue).
         
     .Parameter UnixTime
         The the unix time stamp of the metrics being sent the Graphite Server.
