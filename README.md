@@ -192,5 +192,6 @@ Start-SQLStatsToGraphite | The function to query SQL. This is an endless loop wh
 Send-GraphiteEvent | Sends an event to Graphite using the Graphite Event API. More information about the events API can be found [in this blog post](http://obfuscurity.com/2014/01/Graphite-Tip-A-Better-Way-to-Store-Events).
 ConvertTo-GraphiteMetric | Takes the Windows Performance counter name and coverts it to something that Graphite can use.
 Send-GraphiteMetric | Allows you to send metrics to Graphite in an ad-hoc manner.
+Send-BulkGraphiteMetrics | Sends several Graphite Metrics to a Carbon server with one request. Bulk requests save a lot of resources for Graphite server.
 Convert-TimeZone | Converts from one time zone to another.
 Import-XMLConfig | Loads the XML Configuration file. Not really useful out side of the script.
