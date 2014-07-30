@@ -1,52 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Configuration>
-	<Graphite>
-		<CarbonServer>yourCarbonServerNameOrIP</CarbonServer>
-		<CarbonServerPort>2003</CarbonServerPort>
-		<MetricPath>datacenter1.servers</MetricPath>
-		<MetricSendIntervalSeconds>15</MetricSendIntervalSeconds>
-		<TimeZoneOfGraphiteServer>UTC</TimeZoneOfGraphiteServer>
-	</Graphite>
-	<PerformanceCounters>
-		<Counter Name="\Network Interface(*)\Bytes Received/sec"/>
-		<Counter Name="\Network Interface(*)\Bytes Sent/sec"/>
-		<Counter Name="\Network Interface(*)\Packets Received Unicast/sec"/>
-		<Counter Name="\Network Interface(*)\Packets Sent Unicast/sec"/>
-		<Counter Name="\Network Interface(*)\Packets Received Non-Unicast/sec"/>
-		<Counter Name="\Network Interface(*)\Packets Sent Non-Unicast/sec"/>
-		<Counter Name="\Processor(_Total)\% Processor Time"/>
-		<Counter Name="\Memory\Available MBytes"/>
-		<Counter Name="\Memory\Pages/sec"/>
-		<Counter Name="\Memory\Pages Input/sec"/>
-		<Counter Name="\System\Processor Queue Length"/>
-		<Counter Name="\System\Threads"/>
-		<Counter Name="\PhysicalDisk(*)\Avg. Disk Write Queue Length"/>
-		<Counter Name="\PhysicalDisk(*)\Avg. Disk Read Queue Length"/>
-	</PerformanceCounters>
-	<Filtering>
-		<MetricFilter Name="isatap"/>
-		<MetricFilter Name="teredo tunneling"/>
-	</Filtering>
-	<MSSQLMetics>
-		<MetricPath>datacenter1.sqlmetrics</MetricPath>
-		<MetricSendIntervalSeconds>60</MetricSendIntervalSeconds>
-		<SQLConnectionTimeoutSeconds>5</SQLConnectionTimeoutSeconds>
-		<SQLQueryTimeoutSeconds>5</SQLQueryTimeoutSeconds>
-		<SQLServers>
+    <Graphite>
+        <CarbonServer>yourCarbonServerNameOrIP</CarbonServer>
+        <CarbonServerPort>2003</CarbonServerPort>
+        <MetricPath>datacenter1.servers</MetricPath>
+        <MetricSendIntervalSeconds>15</MetricSendIntervalSeconds>
+        <TimeZoneOfGraphiteServer>UTC</TimeZoneOfGraphiteServer>
+    </Graphite>
+    <PerformanceCounters>
+        <Counter Name="\Network Interface(*)\Bytes Received/sec"/>
+        <Counter Name="\Network Interface(*)\Bytes Sent/sec"/>
+        <Counter Name="\Network Interface(*)\Packets Received Unicast/sec"/>
+        <Counter Name="\Network Interface(*)\Packets Sent Unicast/sec"/>
+        <Counter Name="\Network Interface(*)\Packets Received Non-Unicast/sec"/>
+        <Counter Name="\Network Interface(*)\Packets Sent Non-Unicast/sec"/>
+        <Counter Name="\Processor(_Total)\% Processor Time"/>
+        <Counter Name="\Memory\Available MBytes"/>
+        <Counter Name="\Memory\Pages/sec"/>
+        <Counter Name="\Memory\Pages Input/sec"/>
+        <Counter Name="\System\Processor Queue Length"/>
+        <Counter Name="\System\Threads"/>
+        <Counter Name="\PhysicalDisk(*)\Avg. Disk Write Queue Length"/>
+        <Counter Name="\PhysicalDisk(*)\Avg. Disk Read Queue Length"/>
+    </PerformanceCounters>
+    <Filtering>
+        <MetricFilter Name="isatap"/>
+        <MetricFilter Name="teredo tunneling"/>
+    </Filtering>
+    <MSSQLMetics>
+        <MetricPath>datacenter1.sqlmetrics</MetricPath>
+        <MetricSendIntervalSeconds>60</MetricSendIntervalSeconds>
+        <SQLConnectionTimeoutSeconds>5</SQLConnectionTimeoutSeconds>
+        <SQLQueryTimeoutSeconds>5</SQLQueryTimeoutSeconds>
+        <SQLServers>
             <!-- A SQL Server Connection Using SQL Authentication -->
-			<SQLServer ServerInstance="(localdb)\v11.0" Username="sa" Password="PASSWORD1!">
-				<Query Database="mydb" MetricName="mydb.userlist.rowcount" TSQL="select count(userListID) From [dbo].[userList]"/>
-				<Query Database="mydb" MetricName="mydb.userlist.ukemails" TSQL="select count(userListID) From [dbo].[userList] Where Emails like '%.uk%'"/>
-			</SQLServer>
+            <SQLServer ServerInstance="(localdb)\v11.0" Username="sa" Password="PASSWORD1!">
+                <Query Database="mydb" MetricName="mydb.userlist.rowcount" TSQL="select count(userListID) From [dbo].[userList]"/>
+                <Query Database="mydb" MetricName="mydb.userlist.ukemails" TSQL="select count(userListID) From [dbo].[userList] Where Emails like '%.uk%'"/>
+            </SQLServer>
             <!-- A SQL Server Connection Using Windows Authentication. The credentials from the running PowerShell session will be used. -->
-			<SQLServer ServerInstance="MSSQLServer" Username="" Password="">
-				<Query Database="citydb" MetricName="citydb.cities.navadwipkota" TSQL="Select COUNT (city) from [dbo].[cities] Where City = 'Navadwip' OR City = 'Kota'"/>
+            <SQLServer ServerInstance="MSSQLServer" Username="" Password="">
+                <Query Database="citydb" MetricName="citydb.cities.navadwipkota" TSQL="Select COUNT (city) from [dbo].[cities] Where City = 'Navadwip' OR City = 'Kota'"/>
                 <!-- An example query SQL query using a greater-than symbol. The symbol must be replaced with an XML Entity References. List here - http://msdn.microsoft.com/en-us/library/windows/desktop/dd892769%28v=vs.85%29.aspx -->
                 <Query Database="addressbook" MetricName="people.ages.over30" TSQL="Select COUNT (personid) from [dbo].[tblAddressBook] Where Age &gt; 30"/>
-			</SQLServer>
-		</SQLServers>
-	</MSSQLMetics>
-	<Logging>
-		<VerboseOutput>True</VerboseOutput>
-	</Logging>
+            </SQLServer>
+        </SQLServers>
+    </MSSQLMetics>
+    <Logging>
+        <VerboseOutput>True</VerboseOutput>
+    </Logging>
 </Configuration>
