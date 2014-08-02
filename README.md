@@ -179,7 +179,7 @@ If you want to remove a service, read the NSSM documentation [http://nssm.cc/com
 4. Check the service installed successfully `Get-Service -Name GraphitePowerShell`
 5. Start the service `Start-Service -Name GraphitePowerShell`
 
-## <a name="functions">Included Functions
+## <a name="functions">Included Functions</a>
 
 There are several functions that are exposed by the script which available to use in an ad-hoc manner.
 
