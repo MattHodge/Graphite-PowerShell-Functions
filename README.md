@@ -15,6 +15,7 @@ More details at [http://www.hodgkins.net.au/mswindows/using-powershell-to-send-m
 * Additional functions are exposed that allow you to send data to Graphite from PowerShell easily. [Here](#functions) is the list of included functions
 * Script can be installed to run as a service
 * Installable by Chef Cookbook [which is available here](https://github.com/tas50/chef-graphite_powershell_functions/)
+* Supports Hosted Graphite (https://www.hostedgraphite.com)
 
 ## Installation
 
@@ -32,8 +33,8 @@ The configuration file is fairly self-explanatory, but here is a description for
 Configuration Name | Description
 --- | ---
 CarbonServer | The server name where Carbon is running. The Carbon daemon is usually running on the Graphite server.
-CarbonServerPort | The port number for Carbon. Its default port number is 2003
-MetricPath | The path of the metric you want to be sent to the server
+CarbonServerPort | The port number for Carbon. Its default port number is 2003.
+MetricPath | The path of the metric you want to be sent to the server. If you are using HostedGraphite, put your API key before the rest of the metric path, for example `YOUR-API-KEY.datacenter1.servers`.
 MetricSendIntervalSeconds | The interval to send metrics to Carbon; I recommend 5 seconds or greater. The more metrics you are collecting the longer it takes to send them to the Graphite server. You can see how long it takes to send the metrics each time the loop runs by using running the `Start-StatsToGraphite` function and having *VerboseOutput* set to *True*.
 TimeZoneOfGraphiteServer | Set this to the time zone of your Graphite server and the **Start-StatsToGraphite** function will convert the local time zone of the server to the time zone of the Graphite server. This is useful if you have servers in different time zones. To get a list of valid options run **Convert-TimeZone -ListTimeZones** and use the applicable ID.
 
