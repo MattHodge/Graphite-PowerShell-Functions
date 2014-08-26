@@ -49,8 +49,14 @@ Function Start-StatsToGraphite
         # Update the Last Run Time and Use To Track How Long Execution Took
         $lastRunTime = Get-Date
         
+        $CountersNames = @()
+        ForEach($Key in $Config.Counters.Keys)
+        {
+            $CountersNames += $Key
+        }
+
         # Take the Sample of the Counter
-        $collections = Get-Counter -Counter $Config.Counters -SampleInterval 1 -MaxSamples 1
+        $collections = Get-Counter -Counter $CountersNames -SampleInterval 1 -MaxSamples 1
         
         # Filter the Output of the Counters
         $samples = $collections.CounterSamples
@@ -379,47 +385,60 @@ Function ConvertTo-GraphiteMetric
     )
     
     # Removing Beginning Backslashes"
-    $cleanNameOfSample = $MetricToClean -replace '^\\\\', ''
-    
-    # Replacing Backslashes After ServerName With dot"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\\\\', '.'
-    
-    # Removing Replacing Colon with Dot"
-    $cleanNameOfSample = $cleanNameOfSample -replace ':', '.'
-    
-    # Changing Fwd Slash To Dash"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\/', '-'
-    
-    # Changing BackSlash To Dot"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\\', '.'
-    
-    # Changing Opening Round Bracket to Dot"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\(', '.'
-    
-    # Removing Closing Round Bracket to Dot"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\)', ''
-    
-    # Removing Square Bracket"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\]', ''
-    
-    # Removing Square Bracket"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\[', ''
-    
-    # Removing Percentage Sign"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\%', ''
-    
-    # Removing Spaces"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\s+', ''
-    
-    # Removing Double Dots"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\.\.', '.'
-    
-    if ($RemoveUnderscores)
+    $MetricToClean = $MetricToClean -replace '^\\\\', ''
+ 
+    # We remove the hostname to verify if a metric name was specified
+    $regex = [regex]'^[a-zA-Z0-9-]+\\'
+    $rawMetricToClean = $MetricToClean -replace $regex, '\'
+
+    $rawMetricName = $Config.Counters[$rawMetricToClean]
+
+    If ($rawMetricName)
     {
-        Write-Verbose "Removing Underscores as the switch is enabled"
-        $cleanNameOfSample = $cleanNameOfSample -replace '_', ''
+        $cleanNameOfSample = $MetricToClean.replace($rawMetricToClean, $rawMetricName)
     }
-    
+    Else
+    {
+        # Replacing Backslashes After ServerName With dot"
+        $cleanNameOfSample = $MetricToClean -replace '\\\\', '.'
+ 
+        # Removing Replacing Colon with Dot"
+        $cleanNameOfSample = $cleanNameOfSample -replace ':', '.'
+
+        # Changing Fwd Slash To Dash"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\/', '-'
+
+        # Changing BackSlash To Dot"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\\', '.'
+
+        # Changing Opening Round Bracket to Dot"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\(', '.'
+
+        # Removing Closing Round Bracket to Dot"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\)', ''
+
+        # Removing Square Bracket"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\]', ''
+
+        # Removing Square Bracket"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\[', ''
+
+        # Removing Percentage Sign"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\%', ''
+
+        # Removing Spaces"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\s+', ''
+
+        # Removing Double Dots"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\.\.', '.'
+
+        if ($RemoveUnderscores)
+        {
+            Write-Verbose "Removing Underscores as the switch is enabled"
+            $cleanNameOfSample = $cleanNameOfSample -replace '_', ''
+        }
+    }
+ 
     if ($NicePhysicalDisks)
     {
         Write-Verbose "NicePhyiscalDisks switch is enabled"
@@ -914,12 +933,20 @@ Function Import-XMLConfig
     [bool]$Config.ShowOutput = [System.Convert]::ToBoolean($xmlfile.Configuration.Logging.VerboseOutput)
     
     # Create the Performance Counters Array
-    $Config.Counters = @()
+    $Config.Counters = @{}
     
     # Load each row from the configuration file into the counter array
     ForEach ($counter in $xmlfile.Configuration.PerformanceCounters.Counter)
     {
-        $Config.Counters += $counter.Name
+        If (! $Counter.Metric)
+        {
+            $Metric = ""
+        }
+        Else
+        {
+            $Metric = $Counter.Metric
+        }
+        $Config.Counters.Add($counter.Name,$Metric)
     }
     
     # Use the filters to create a RegEx string
