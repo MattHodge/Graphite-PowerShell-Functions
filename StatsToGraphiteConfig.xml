@@ -3,7 +3,7 @@
     <Graphite>
         <CarbonServer>yourCarbonServerNameOrIP</CarbonServer>
         <CarbonServerPort>2003</CarbonServerPort>
-        <MetricPath>9474db64-2bc0-4186-b086-f41fae010649.home.pc</MetricPath>
+        <MetricPath>datacenter1.servers</MetricPath>
         <MetricSendIntervalSeconds>5</MetricSendIntervalSeconds>
         <TimeZoneOfGraphiteServer>UTC</TimeZoneOfGraphiteServer>
         <SendUsingUDP>False</SendUsingUDP>
