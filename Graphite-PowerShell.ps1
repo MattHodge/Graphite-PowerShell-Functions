@@ -550,7 +550,9 @@ function Send-GraphiteMetric
             }
             catch
             {
-                Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file"
+                Write-Error "Exception Type: $($_.Exception.GetType().FullName)"
+                Write-Error "Exception Message: $($_.Exception.Message)"
+                Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file."
             }
         }
         else
@@ -693,7 +695,9 @@ function Send-BulkGraphiteMetrics
             }
             catch
             {
-                Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file"
+                Write-Error "Exception Type: $($_.Exception.GetType().FullName)"
+                Write-Error "Exception Message: $($_.Exception.Message)"
+                Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file."
             }
         }
         else
