@@ -6,7 +6,7 @@ More details at [http://www.hodgkins.net.au/mswindows/using-powershell-to-send-m
 
 ## Features
 
-* Sends Metrics to Graphite's Carbon daemon using UDP
+* Sends Metrics to Graphite's Carbon daemon using TCP or UDP
 * Can collect Windows Performance Counters
 * Can collect values by using T-SQL queries against MS SQL databases
 * Will convert time zones; If the server you want the metrics sent from is in a different time zone to your Graphite server, the script will convert the time so metrics come in with a time that matches the Graphite server
@@ -37,6 +37,7 @@ CarbonServerPort | The port number for Carbon. Its default port number is 2003.
 MetricPath | The path of the metric you want to be sent to the server. If you are using HostedGraphite, put your API key before the rest of the metric path, for example `YOUR-API-KEY.datacenter1.servers`.
 MetricSendIntervalSeconds | The interval to send metrics to Carbon; I recommend 5 seconds or greater. The more metrics you are collecting the longer it takes to send them to the Graphite server. You can see how long it takes to send the metrics each time the loop runs by using running the `Start-StatsToGraphite` function and having *VerboseOutput* set to *True*.
 TimeZoneOfGraphiteServer | Set this to the time zone of your Graphite server and the **Start-StatsToGraphite** function will convert the local time zone of the server to the time zone of the Graphite server. This is useful if you have servers in different time zones. To get a list of valid options run **Convert-TimeZone -ListTimeZones** and use the applicable ID.
+SendUsingUDP | Sends metrics via UDP instead of TCP. This doesn't seem to work with HostedGraphite, but works with self-hosted.
 
 #### Performance Counters Configuration Section
 

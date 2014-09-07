@@ -106,13 +106,13 @@ Function Start-StatsToGraphite
         # Use Verbose if Verbose output is enabled in the config file.
         if ($Config.ShowOutput)
         {
-            Send-BulkGraphiteMetrics -CarbonServer $Config.CarbonServer -CarbonServerPort $Config.CarbonServerPort -Metrics $metricsToSend -DateTime $convertedTime -Verbose
+            Send-BulkGraphiteMetrics -CarbonServer $Config.CarbonServer -CarbonServerPort $Config.CarbonServerPort -Metrics $metricsToSend -DateTime $convertedTime -UDP:$Config.SendUsingUDP -Verbose
         }
         
         # If config value is not set, don't run command with Verbose switch
         else
         {
-            Send-BulkGraphiteMetrics -CarbonServer $Config.CarbonServer -CarbonServerPort $Config.CarbonServerPort -Metrics $metricsToSend -DateTime $convertedTime
+            Send-BulkGraphiteMetrics -CarbonServer $Config.CarbonServer -CarbonServerPort $Config.CarbonServerPort -Metrics $metricsToSend -DateTime $convertedTime -UDP:$Config.SendUsingUDP
         }
         
         # Reloads The Configuration File After the Loop so new counters can be added on the fly
@@ -508,7 +508,11 @@ function Send-GraphiteMetric
         
         # Will Display what will be sent to Graphite but not actually send it
         [Parameter(Mandatory = $false)]
-        [switch]$TestMode
+        [switch]$TestMode,
+
+        # Sends the metrics over UDP instead of TCP
+        [Parameter(Mandatory = $false)]
+        [switch]$UDP
     )
     
     # If Received A DateTime Object - Convert To UnixTime
@@ -526,23 +530,56 @@ function Send-GraphiteMetric
     # Do not send if TestMode enabled
     if (!($TestMode))
     {
-        try
+        
+        if (!($UDP))
         {
-            #Stream results to the Carbon server
-            $socket = New-Object System.Net.Sockets.TCPClient
-            $socket.connect($CarbonServer, $CarbonServerPort)
-            $stream = $socket.GetStream()
-            $writer = new-object System.IO.StreamWriter($stream)
+            try
+            {
+                #Stream results to the Carbon server
+                $socket = New-Object System.Net.Sockets.TCPClient
+                $socket.connect($CarbonServer, $CarbonServerPort)
+                $stream = $socket.GetStream()
+                $writer = new-object System.IO.StreamWriter($stream)
             
-            #Write out metric to the stream.
-            $writer.WriteLine($metric)
-            $writer.Flush() #Flush and write our metrics.
-            $writer.Close()
-            $stream.Close()
+                #Write out metric to the stream.
+                $writer.WriteLine($metric)
+                $writer.Flush() #Flush and write our metrics.
+                $writer.Close()
+                $stream.Close()
+                Write-Verbose "Sent via TCP to $($CarbonServer) on port $($CarbonServerPort)."
+            }
+            catch
+            {
+                Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file"
+            }
         }
-        catch
+        else
         {
-            Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file"
+            try
+            {             
+                # Create UDP Object
+                $udpobject = new-Object system.Net.Sockets.Udpclient($CarbonServer, $CarbonServerPort)
+                $enc = new-object system.text.asciiencoding
+                
+                $Message = "$($metric)`r"
+
+                # Convert to bytes
+                $byte = $enc.GetBytes($Message)
+
+                # Send the bytes
+                $Sent = $udpobject.Send($byte,$byte.Length)
+
+                # Close the UDP Connection
+                $udpobject.Close()
+
+                Write-Verbose "Sent via UDP to $($CarbonServer) on port $($CarbonServerPort)."
+            }
+            catch
+            {
+                Write-Error "Exception Type: $($_.Exception.GetType().FullName)"
+                Write-Error "Exception Message: $($_.Exception.Message)"
+                Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file."
+            }
         }
     }
 }
@@ -608,7 +645,11 @@ function Send-BulkGraphiteMetrics
         
         # Will Display what will be sent to Graphite but not actually send it
         [Parameter(Mandatory = $false)]
-        [switch]$TestMode
+        [switch]$TestMode,
+
+        # Sends the metrics over UDP instead of TCP
+        [Parameter(Mandatory = $false)]
+        [switch]$UDP
     )
     
     # If Received A DateTime Object - Convert To UnixTime
@@ -630,26 +671,62 @@ function Send-BulkGraphiteMetrics
     # Do not send if TestMode enabled
     if (!($TestMode))
     {
-        try
+        if (!($UDP))
         {
-            #Stream results to the Carbon server
-            $socket = New-Object System.Net.Sockets.TCPClient
-            $socket.connect($CarbonServer, $CarbonServerPort)
-            $stream = $socket.GetStream()
-            $writer = new-object System.IO.StreamWriter($stream)
-            
-            #Write out metrics to the stream.
-            foreach ($metricString in $metricStrings)
+            try
             {
-                $writer.WriteLine($metricString)
+                #Stream results to the Carbon server
+                $socket = New-Object System.Net.Sockets.TCPClient
+                $socket.connect($CarbonServer, $CarbonServerPort)
+                $stream = $socket.GetStream()
+                $writer = new-object System.IO.StreamWriter($stream)
+            
+                #Write out metrics to the stream.
+                ForEach ($metricString in $metricStrings)
+                {
+                    $writer.WriteLine($metricString)
+                }
+                $writer.Flush() #Flush and write our metrics.
+                $writer.Close()
+                $stream.Close()
+                Write-Verbose "Sent via TCP to $($CarbonServer) on port $($CarbonServerPort)."
             }
-            $writer.Flush() #Flush and write our metrics.
-            $writer.Close()
-            $stream.Close()
+            catch
+            {
+                Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file"
+            }
         }
-        catch
+        else
         {
-            Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file"
+            try
+            {             
+                # Create UDP Object
+                $udpobject = new-Object system.Net.Sockets.Udpclient($CarbonServer, $CarbonServerPort)
+                $enc = new-object system.text.asciiencoding
+                
+                # Write Out Metrics into the message
+                ForEach ($metricString in $metricStrings)
+                {
+                    $Message = $Message + "$($metricString)`r"
+                }
+
+                # Convert to bytes
+                $byte = $enc.GetBytes($Message)
+
+                # Send the bytes
+                $Sent = $udpobject.Send($byte,$byte.Length)
+
+                # Close the UDP Connection
+                $udpobject.Close()
+
+                Write-Verbose "Sent via UDP to $($CarbonServer) on port $($CarbonServerPort)."
+            }
+            catch
+            {
+                Write-Error "Exception Type: $($_.Exception.GetType().FullName)"
+                Write-Error "Exception Message: $($_.Exception.Message)"
+                Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file."
+            }
         }
     }
 }
@@ -902,6 +979,9 @@ Function Import-XMLConfig
     
     # Get the Timezone Of the Graphite Server
     $Config.TimeZoneOfGraphiteServer = $xmlfile.Configuration.Graphite.TimeZoneOfGraphiteServer
+
+    # Convert Value in Configuration File to Bool for Sending via UDP
+    [bool]$Config.SendUsingUDP = [System.Convert]::ToBoolean($xmlfile.Configuration.Graphite.SendUsingUDP)
     
     # Convert Interval into TimeSpan
     $Config.MetricTimeSpan = [timespan]::FromSeconds($Config.MetricSendIntervalSeconds)
