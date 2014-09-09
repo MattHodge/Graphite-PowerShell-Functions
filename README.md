@@ -52,6 +52,11 @@ Here are some other examples:
 * `<Counter Name="\ASP.NET Apps v4.0.30319(_lm_w3svc_1_Root_YourIISApp)\Request Wait Time"/>`
 * `<Counter Name="\PhysicalDisk(*)\Avg. Disk Write Queue Length"/>`
 
+If you wish to specify the exact name the metric will use on Graphite (e.g. if your Windows version is localized), you can specify it with:
+
+* `<Counter Name="\Web Service(YourIISWebSite)\Total Bytes Received" Metric=".http_server.received.bytes"/>`
+* `<Counter Name="\Web Service(YourIISWebSite)\Total Bytes Sent" Metric=".http_server.sent.bytes"/>`
+
 #### Filtering Configuration Section
 
 This section lists names you want to filter out of the Performance Counter list. Filtering is useful when you want to use a wildcard in the performance counter, but want to exclude some of the returned counters. I have included *isatap* and *teredo tunneling* by default to filter out IPv6 interfaces. Remove all <MetricFilter> tags if you want no filtering.

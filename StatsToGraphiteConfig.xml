@@ -9,8 +9,8 @@
         <SendUsingUDP>False</SendUsingUDP>
     </Graphite>
     <PerformanceCounters>
-        <Counter Name="\Network Interface(*)\Bytes Received/sec"/>
-        <Counter Name="\Network Interface(*)\Bytes Sent/sec"/>
+        <Counter Name="\Network Interface(*)\Bytes Received/sec" Metric=".network.received.bytes"/>
+        <Counter Name="\Network Interface(*)\Bytes Sent/sec" Metric="network.sent.bytes"/>
         <Counter Name="\Network Interface(*)\Packets Received Unicast/sec"/>
         <Counter Name="\Network Interface(*)\Packets Sent Unicast/sec"/>
         <Counter Name="\Network Interface(*)\Packets Received Non-Unicast/sec"/>
