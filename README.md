@@ -105,7 +105,7 @@ The following shows how to use the `Start-StatsToGraphite`, which will collect W
 2. Dot source the script by running `. .\Graphite-PowerShell.ps1`
 3. Start the script by using the function `Start-StatsToGraphite`. If you want Verbose detailed use `Start-StatsToGraphite -Verbose`.
 
-You may need to run the PowerShell instance with Administrative rights depending on the performance counters you want to access. This is due to the scripts use of the `Get-Counter` CmdLet. 
+You may need to run the PowerShell instance with Administrative rights depending on the performance counters you want to access. This is due to the scripts use of the `Get-Counter` CmdLet.
 
 From the [Get-Counter help page on TechNet](http://technet.microsoft.com/library/963e9e51-4232-4ccf-881d-c2048ff35c2a(v=wps.630).aspx):
 
@@ -116,6 +116,14 @@ The below image is what `Start-StatsToGraphite` like with **VerboseOutput** turn
 ![alt text](http://i.imgur.com/G3pwnhf.jpg "Start-StatsToGraphite with Verbose Output")
 
 That is all there is to getting your Windows performance counters into Graphite.
+
+Note: If you install the Boot2Docker and docker graphite vm, this is a great way to test.
+
+The config file is already set to use the default VM IP of 192.168.59.103.
+
+https://docs.docker.com/installation/windows/
+
+https://github.com/hopsoft/docker-graphite-statsd
 
 ## Usage - SQL Query Results
 
@@ -131,7 +139,7 @@ The below image is what `Start-SQLStatsToGraphite` like with **VerboseOutput** t
 
 This function requires the Microsoft SQL PowerShell Modules/SnapIns. The easiest way to get these is to download them from the [SQL 2012 R2 SP1 Feature Pack](http://www.microsoft.com/en-us/download/details.aspx?id=35580). You will need to grab the following:
 * Microsoft® SQL Server® 2012 Shared Management Object
-* Microsoft® System CLR Types for Microsoft® SQL Server® 2012 
+* Microsoft® System CLR Types for Microsoft® SQL Server® 2012
 * Microsoft® Windows PowerShell Extensions for Microsoft® SQL Server® 2012
 
 ## Installing as a Service
@@ -154,7 +162,7 @@ The below configurations will show how to run either `Start-StatsToGraphite` or 
 
 ### Running Start-StatsToGraphite as a Service
 
-The following configuration can be used to run `Start-StatsToGraphite` as a service. 
+The following configuration can be used to run `Start-StatsToGraphite` as a service.
 
 Setting Name | Value
 --- | ---
@@ -164,7 +172,7 @@ Options | -command "& { . C:\GraphitePowerShell\Graphite-PowerShell.ps1; Start-S
 
 ### Running Start-SQLStatsToGraphite as a Service
 
-The following configuration can be used to run `Start-SQLStatsToGraphite` as a service. 
+The following configuration can be used to run `Start-SQLStatsToGraphite` as a service.
 
 Setting Name | Value
 --- | ---
@@ -189,8 +197,8 @@ For full help for these functions run the PowerShell command `Get-Help | <Functi
 
 Function Name | Description
 --- | ---
-Start-StatsToGraphite | The function to collect Windows Performance Counters. This is an endless loop which will send metrics to Graphite. 
-Start-SQLStatsToGraphite | The function to query SQL. This is an endless loop which will send metrics to Graphite. 
+Start-StatsToGraphite | The function to collect Windows Performance Counters. This is an endless loop which will send metrics to Graphite.
+Start-SQLStatsToGraphite | The function to query SQL. This is an endless loop which will send metrics to Graphite.
 Send-GraphiteEvent | Sends an event to Graphite using the Graphite Event API. More information about the events API can be found [in this blog post](http://obfuscurity.com/2014/01/Graphite-Tip-A-Better-Way-to-Store-Events).
 ConvertTo-GraphiteMetric | Takes the Windows Performance counter name and coverts it to something that Graphite can use.
 Send-GraphiteMetric | Allows you to send metrics to Graphite in an ad-hoc manner.
