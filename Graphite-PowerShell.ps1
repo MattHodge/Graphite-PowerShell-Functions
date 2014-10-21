@@ -13,6 +13,15 @@ Function Start-StatsToGraphite
     .Parameter Verbose
         Provides Verbose output which is useful for troubleshooting
 
+    .Parameter TestMode
+        Metrics that would be sent to Graphite is shown, without sending the metric on to Graphite.
+
+    .Parameter ExcludePerfCounters
+        Excludes Performance counters defined in XML config
+
+    .Parameter SqlMetrics
+        Includes SQL Metrics defined in XML config
+
     .Example
         PS> Start-StatsToGraphite
 
@@ -23,13 +32,30 @@ Function Start-StatsToGraphite
 
         Will start the endless loop to send stats to Graphite and provide Verbose output.
 
+    .Example
+        PS> Start-StatsToGraphite -SqlMetrics
+
+        Sends perf counters & sql metrics
+
+    .Example
+        PS> Start-StatsToGraphite -SqlMetrics -ExcludePerfCounters
+
+        Sends only sql metrics
+
     .Notes
         NAME:      Start-StatsToGraphite
         AUTHOR:    Matthew Hodgkins
         WEBSITE:   http://www.hodgkins.net.au
 #>
     [CmdletBinding()]
-    param ()
+    Param
+    (
+        # Enable Test Mode. Metrics will not be sent to Graphite
+        [Parameter(Mandatory = $false)]
+        [switch]$TestMode,
+        [switch]$ExcludePerfCounters = $false,
+        [switch]$SqlMetrics = $false
+    )
 
     # Run The Load XML Config Function
     $Config = Import-XMLConfig -ConfigPath $configPath
@@ -38,6 +64,42 @@ Function Start-StatsToGraphite
     $sleep = 0
 
     $configFileLastWrite = (Get-Item $configPath).LastWriteTime
+
+    if($ExcludePerfCounters -and -not $SqlMetrics) {
+        Write-Error "Parameter combination provided will prevent any metrics from being collected"
+        return
+    }
+
+    if($SqlMetrics) {
+        if ($Config.MSSQLServers.Length -gt 0)
+        {
+            # Check for SQLPS Module
+            if (($listofSQLModules = Get-Module -List SQLPS).Length -eq 1)
+            {
+                # Load The SQL Module
+                Import-Module SQLPS
+            }
+            # Check for the PS SQL SnapIn
+            elseif ((Test-Path ($env:ProgramFiles + '\Microsoft SQL Server\100\Tools\Binn\Microsoft.SqlServer.Management.PSProvider.dll')) `
+                -or (Test-Path ($env:ProgramFiles + ' (x86)' + '\Microsoft SQL Server\100\Tools\Binn\Microsoft.SqlServer.Management.PSProvider.dll')))
+            {
+                # Load The SQL SnapIns
+                Add-PSSnapin SqlServerCmdletSnapin100
+                Add-PSSnapin SqlServerProviderSnapin100
+            }
+            # If No Snapin's Found end the function
+            else
+            {
+                Write-Error "Unable to find any SQL CmdLets. Please install them and try again."
+                # End the Function
+                Break
+            }
+        }
+        else
+        {
+            Write-Warning "There are no SQL Servers in your configuration file. No SQL metrics will be collected."
+        }
+    }
 
     # Start Endless Loop
     while ($true)
@@ -50,15 +112,6 @@ Function Start-StatsToGraphite
         # Used to track execution time
         $iterationStopWatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-        # Take the Sample of the Counter
-        $collections = Get-Counter -Counter $Config.Counters -SampleInterval 1 -MaxSamples 1
-
-        # Filter the Output of the Counters
-        $samples = $collections.CounterSamples
-
-        # Verbose
-        Write-Verbose "All Samples Collected"
-
         # Convert To The TimeZone of the Graphite Server
         $convertedTime = Convert-TimeZone -DateTime (Get-Date -Format s) -ToTimeZone $Config.TimeZoneOfGraphiteServer
 
@@ -70,43 +123,108 @@ Function Start-StatsToGraphite
 
         $metricsToSend = @{}
 
-        # Loop Through All The Counters
-        foreach ($sample in $samples)
+        if(-not $ExcludePerfCounters)
         {
-            if ($Config.ShowOutput)
+            # Take the Sample of the Counter
+            $collections = Get-Counter -Counter $Config.Counters -SampleInterval 1 -MaxSamples 1
+
+            # Filter the Output of the Counters
+            $samples = $collections.CounterSamples
+
+            # Verbose
+            Write-Verbose "All Samples Collected"
+
+            # Loop Through All The Counters
+            foreach ($sample in $samples)
             {
-                $samplePath = $sample.Path
-                Write-Verbose "Sample Name: $samplePath"
-            }
+                if ($Config.ShowOutput)
+                {
+                    $samplePath = $sample.Path
+                    Write-Verbose "Sample Name: $samplePath"
+                }
 
-            if(-not [string]::IsNullOrWhiteSpace($Config.Filters) -and $sample.Path -notmatch [regex]$Config.Filters)
+                if(-not [string]::IsNullOrWhiteSpace($Config.Filters) -and $sample.Path -notmatch [regex]$Config.Filters) {
+                    $commandMeasurement = Measure-Command -Expression {
+                        # Run the sample path through the ConvertTo-GraphiteMetric function
+                        $cleanNameOfSample = ConvertTo-GraphiteMetric -MetricToClean $sample.Path -RemoveUnderscores -NicePhysicalDisks
+
+                        # Build the full metric path
+                        $metricPath = $Config.MetricPath + '.' + $cleanNameOfSample
+
+                        $metricsToSend[$metricPath] = $sample.Cookedvalue
+                    }
+
+                    $DebugOut = 'Job Execution Time To Get to Clean Metrics: ' + $commandMeasurement.TotalSeconds + ' seconds'
+                    Write-Verbose $DebugOut
+                }
+                else {
+                    Write-Verbose "Filtering out Sample Name: $samplePath as it matches something in the filters or filters is empty"
+                }
+            }
+        }
+
+        if($SqlMetrics) {
+            # Loop through each SQL Server
+            foreach ($sqlServer in $Config.MSSQLServers)
             {
-                # Run the sample path through the ConvertTo-GraphiteMetric function
-                $cleanNameOfSample = ConvertTo-GraphiteMetric -MetricToClean $sample.Path -RemoveUnderscores -NicePhysicalDisks
+                Write-Verbose "Running through SQLServer $($sqlServer.ServerInstance)"
+                # Loop through each query for the SQL server
+                foreach ($query in $sqlServer.Queries)
+                {
+                    Write-Verbose "Current Query $($query.TSQL)"
 
-                # Build the full metric path
-                $metricPath = $Config.MetricPath + '.' + $cleanNameOfSample
+                    $sqlCmdParams = @{
+                        'ServerInstance' = $sqlServer.ServerInstance;
+                        'Database' = $query.Database;
+                        'Query' = $query.TSQL;
+                        'ConnectionTimeout' = $Config.MSSQLConnectTimeout;
+                        'QueryTimeout' = $Config.MSSQLQueryTimeout
+                    }
 
-                $metricsToSend[$metricPath] = $sample.Cookedvalue
+                    # Run the Invoke-SqlCmd Cmdlet with a username and password only if they are present in the config file
+                    if (-not [string]::IsNullOrWhitespace($sqlServer.Username) `
+                        -and -not [string]::IsNullOrWhitespace($sqlServer.Password))
+                    {
+                        $sqlCmdParams['Username'] = $sqlServer.Username
+                        $sqlCmdParams['Password'] = $sqlServer.Password
+                    }
 
+                    # Run the SQL Command
+                    try
+                    {
+                        $commandMeasurement = Measure-Command -Expression {
+                            $sqlresult = Invoke-SQLCmd @sqlCmdParams
 
-                $DebugOut = 'Job Execution Time To Get to Clean Metrics: ' + ($iterationStopWatch.Elapsed).TotalSeconds + ' seconds'
-                Write-Verbose $DebugOut
-            }
-            else
-            {
-                Write-Verbose "Filtering out Sample Name: $samplePath as it matches something in the filters or filters is empty"
-            }
+                            # Build the MetricPath that will be used to send the metric to Graphite
+                            $metricPath = $Config.MSSQLMetricPath + '.' + $query.MetricName
+
+                            $metricsToSend[$metricPath] = $sqlresult[0]
+                        }
+
+                        Write-Verbose ('SQL Metric Collection Execution Time: ' + $commandMeasurement.TotalSeconds + ' seconds')
+                    }
+                    catch
+                    {
+                        Write-Error "Caught an exception"
+                        Write-Error "Exception Type: $($_.Exception.GetType().FullName)"
+                        Write-Error "Exception Message: $($_.Exception.Message)"
+                    }
+                } #end foreach Query
+            } #end foreach SQL Server
         }
 
         # Send To Graphite Server
 
-        Send-BulkGraphiteMetrics -CarbonServer $Config.CarbonServer `
-            -CarbonServerPort $Config.CarbonServerPort `
-            -Metrics $metricsToSend `
-            -DateTime $convertedTime `
-            -UDP:$Config.SendUsingUDP `
-            -Verbose:$($Config.ShowOutput)
+        $sendBulkGraphiteMetricsParams = @{
+            "CarbonServer" = $Config.CarbonServer
+            "CarbonServerPort" = $Config.CarbonServerPort
+            "Metrics" = $metricsToSend
+            "DateTime" = $convertedTime
+            "UDP" = $Config.SendUsingUDP
+            "Verbose" = $Config.ShowOutput
+        }
+
+        Send-BulkGraphiteMetrics @sendBulkGraphiteMetricsParams
 
         # Reloads The Configuration File After the Loop so new counters can be added on the fly
         if((Get-Item $configPath).LastWriteTime -gt (Get-Date)) {
@@ -173,164 +291,10 @@ Function Start-SQLStatsToGraphite
         [switch]$TestMode
     )
 
-    # Run The Load XML Config Function
-    $Config = Import-XMLConfig -ConfigPath $configPath
+    $PSBoundParameters['ExcludePerfCounters'] = $true
+    $PSBoundParameters['SqlMetrics'] = $true
 
-    # Doesn’t Run Unless there is SQL Servers in the config file
-    if ($Config.MSSQLServers.Length -eq 0)
-    {
-        Write-Error "There are no SQL Servers in your configuration file. Please add some before running this CmdLet"
-        break
-    }
-
-    # Check for SQLPS Module
-    if (($listofSQLModules = Get-Module -List SQLPS).Length -eq 1)
-    {
-        # Load The SQL Module
-        Import-Module SQLPS
-    }
-    # Check for the PS SQL SnapIn
-    elseif ((Test-Path ($env:ProgramFiles + '\Microsoft SQL Server\100\Tools\Binn\Microsoft.SqlServer.Management.PSProvider.dll')) `
-        -or (Test-Path ($env:ProgramFiles + ' (x86)' + '\Microsoft SQL Server\100\Tools\Binn\Microsoft.SqlServer.Management.PSProvider.dll')))
-    {
-        # Load The SQL SnapIns
-        Add-PSSnapin SqlServerCmdletSnapin100
-        Add-PSSnapin SqlServerProviderSnapin100
-    }
-    # If No Snapin's Found end the function
-    else
-    {
-        Write-Error "Unable to find any SQL CmdLets. Please install them and try again."
-        # End the Function
-        Break
-    }
-    # Get Last Run Time
-    $lastRunTime = [DateTime]::MinValue
-
-    # Start Endless Loop
-    While ($True)
-    {
-        # Loop until enough time has passed to run the process again.
-        While ((Get-Date) - $lastRunTime -lt $Config.MSSQLMetricTimeSpan)
-        {
-            Start-Sleep -Milliseconds 500
-        }
-
-        # Update the Last Run Time and Use To Track How Long Execution Took
-        $lastRunTime = Get-Date
-
-        # Convert To The TimeZone of the Graphite Server
-        $convertedTime = Convert-TimeZone -DateTime (Get-Date -Format s) -ToTimeZone $Config.TimeZoneOfGraphiteServer
-
-        # Get the TargetTime Part of the Script
-        $convertedTime = $convertedTime.TargetTime
-
-        # Round Time to Nearest Time Period
-        $convertedTime = $convertedTime.AddSeconds(- ($convertedTime.Second % $Config.MSSQLMetricSendIntervalSeconds))
-
-        # Loop through each SQL Server
-        foreach ($sqlServer in $Config.MSSQLServers)
-        {
-            Write-Verbose "Running through SQLServer $($sqlServer.ServerInstance)"
-            # Loop through each query for the SQL server
-            foreach ($query in $sqlServer.Queries)
-            {
-                Write-Verbose "Current Query $($query.TSQL)"
-
-                # Run the Invoke-SqlCmd Cmdlet with a username and password only if they are present in the config file
-                if ((($sqlServer.Username).Length -eq 0) -or (($sqlServer.Password).Length -eq 0))
-                {
-                    $sqlCmdParams = @{
-                        'ServerInstance' = $sqlServer.ServerInstance;
-                        'Database' = $query.Database;
-                        'Query' = $query.TSQL;
-                        'ConnectionTimeout' = $Config.MSSQLConnectTimeout;
-                        'QueryTimeout' = $Config.MSSQLQueryTimeout
-                    }
-                }
-                # Run SQL cmd using credentials
-                else
-                {
-                    $sqlCmdParams = @{
-                        'ServerInstance' = $sqlServer.ServerInstance;
-                        'Database' = $query.Database;
-                        'Query' = $query.TSQL;
-                        'ConnectionTimeout' = $Config.MSSQLConnectTimeout;
-                        'QueryTimeout' = $Config.MSSQLQueryTimeout;
-                        'Username' = $sqlServer.Username;
-                        'Password' = $sqlServer.Password
-                    }
-                }
-
-                # Run the SQL Command
-                try
-                {
-                    $sqlresult = Invoke-SQLCmd @sqlCmdParams
-
-                    # Build the MetricPath that will be used to send the metric to Graphite
-                    $metricPath = $Config.MSSQLMetricPath + '.' + $query.MetricName
-
-                    # Send-GraphiteMetric Command - Verbose and TestMode
-                    if ($TestMode)
-                    {
-                        $sendGraphiteCmdParams = @{
-                            CarbonServer = $Config.CarbonServer;
-                            CarbonServerPort = $Config.CarbonServerPort;
-                            MetricPath = $metricPath;
-                            DateTime = $convertedTime;
-                            MetricValue = $sqlresult[0];
-                            Verbose = $True;
-                            TestMode = $True;
-                        }
-                    }
-                    # Send-GraphiteMetric Command - Verbose
-                    elseif ($Config.ShowOutput)
-                    {
-                        $sendGraphiteCmdParams = @{
-                            CarbonServer = $Config.CarbonServer;
-                            CarbonServerPort = $Config.CarbonServerPort;
-                            MetricPath = $metricPath;
-                            MetricValue = $sqlresult[0];
-                            DateTime = $convertedTime;
-                            Verbose = $True;
-                        }
-                    }
-                    # Send-GraphiteMetric Command - Metrics Only
-                    else
-                    {
-                        $sendGraphiteCmdParams = @{
-                            CarbonServer = $Config.CarbonServer;
-                            CarbonServerPort = $Config.CarbonServerPort;
-                            MetricPath = $metricPath;
-                            MetricValue = $sqlresult[0];
-                            DateTime = $convertedTime;
-                        }
-                    }
-
-                    Send-GraphiteMetric @sendGraphiteCmdParams
-
-                    Write-Verbose ('Job Exceution Time: ' + ((Get-Date) - $lastRunTime).TotalSeconds + ' seconds')
-                }
-                catch
-                {
-                    Write-Error "Caught an exception"
-                    Write-Error "Exception Type: $($_.Exception.GetType().FullName)"
-                    Write-Error "Exception Message: $($_.Exception.Message)"
-                }
-            } #end foreach Query
-        } #end foreach SQL Server
-
-
-        if ($Config.ShowOutput)
-        {
-            # Write To Console How Long Execuption Took
-            $VerboseOutPut = 'SQL Job Exceution Time: ' + ((Get-Date) - $lastRunTime).TotalSeconds + ' seconds'
-            Write-Output $VerboseOutPut
-        }
-
-        # Reloads The Configuration File After the Loop so new queries can be added on the fly
-        $Config = Import-XMLConfig -ConfigPath $configPath
-    } #end While Loop
+    Start-StatsToGraphite @PSBoundParameters
 }
 
 Function ConvertTo-GraphiteMetric
@@ -526,11 +490,15 @@ function Send-GraphiteMetric
 
     Write-Verbose "Metric Received: $metric"
 
-    SendMetrics -CarbonServer $CarbonServer `
-                -CarbonServerPort $CarbonServerPort `
-                -Metrics $metric `
-                -IsUdp:$UDP `
-                -TestMode:$TestMode
+    $sendMetricsParams = @{
+        "CarbonServer" = $CarbonServer
+        "CarbonServerPort" = $CarbonServerPort
+        "Metrics" = $metric
+        "IsUdp" = $UDP
+        "TestMode" = $TestMode
+    }
+
+    SendMetrics @sendMetricsParams
 }
 
 function Send-BulkGraphiteMetrics
@@ -617,11 +585,15 @@ function Send-BulkGraphiteMetrics
         Write-Verbose ("Metric Received: " + $metricStrings[-1])
     }
 
-    SendMetrics -CarbonServer $CarbonServer `
-                -CarbonServerPort $CarbonServerPort `
-                -Metrics $metricStrings `
-                -IsUdp:$UDP `
-                -TestMode:$TestMode
+    $sendMetricsParams = @{
+        "CarbonServer" = $CarbonServer
+        "CarbonServerPort" = $CarbonServerPort
+        "Metrics" = $metricStrings
+        "IsUdp" = $UDP
+        "TestMode" = $TestMode
+    }
+
+    SendMetrics @sendMetricsParams
 }
 
 function Send-GraphiteEvent
@@ -809,15 +781,14 @@ function Convert-TimeZone
     if ($ListTimeZones)
     {
         [System.TimeZoneInfo]::GetSystemTimeZones()
+        return
     }
 
     # Run the Function
     else
     {
-        $TimeZoneObject = [System.TimeZoneInfo]::GetSystemTimeZones() | Where-Object { $_.id -eq $ToTimeZone }
-
+        $TimeZoneObject = [System.TimeZoneInfo]::FindSystemTimeZoneById($ToTimeZone)
         $TargetZoneTime = [System.TimeZoneInfo]::ConvertTime($DateTime, $TimeZoneObject)
-
         $OutObject = New-Object -TypeName PSObject -Property @{
             LocalTime = $DateTime
             LocalTimeZone = $(([System.TimeZoneInfo]::LOCAL).id)
@@ -933,26 +904,35 @@ Function Import-XMLConfig
 }
 
 # http://support-hq.blogspot.com/2011/07/using-clause-for-powershell.html
-function PSUsing {
+function PSUsing
+{
     param (
         [System.IDisposable] $inputObject = $(throw "The parameter -inputObject is required."),
         [ScriptBlock] $scriptBlock = $(throw "The parameter -scriptBlock is required.")
     )
 
-    Try {
+    Try
+    {
         &$scriptBlock
-    } Finally {
-        if ($inputObject -ne $null) {
-            if ($inputObject.psbase -eq $null) {
+    }
+    Finally
+    {
+        if ($inputObject -ne $null)
+        {
+            if ($inputObject.psbase -eq $null)
+            {
                 $inputObject.Dispose()
-            } else {
+            }
+            else
+            {
                 $inputObject.psbase.Dispose()
             }
         }
     }
 }
 
-function SendMetrics {
+function SendMetrics
+{
     param (
         [string]$CarbonServer,
         [int]$CarbonServerPort,
@@ -961,18 +941,23 @@ function SendMetrics {
         [switch]$TestMode = $false
     )
 
-    if (!($TestMode)) {
+    if (!($TestMode))
+    {
         try
         {
-            if ($isUdp) {
-                PSUsing ($udpobject = new-Object system.Net.Sockets.Udpclient($CarbonServer, $CarbonServerPort)) {
+            if ($isUdp)
+            {
+                PSUsing ($udpobject = new-Object system.Net.Sockets.Udpclient($CarbonServer, $CarbonServerPort))
+                {
                     $enc = new-object system.text.asciiencoding
                     $Message = "$($metric)`r"
                     $byte = $enc.GetBytes($Message)
                     $Sent = $udpobject.Send($byte,$byte.Length)
                 }
                 Write-Verbose "Sent via UDP to $($CarbonServer) on port $($CarbonServerPort)."
-            } else {
+            }
+            else
+            {
                 PSUsing ($socket = New-Object System.Net.Sockets.TCPClient) {
                     $socket.connect($CarbonServer, $CarbonServerPort)
                     PSUsing ($stream = $socket.GetStream()) {
