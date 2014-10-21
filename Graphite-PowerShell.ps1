@@ -205,9 +205,8 @@ Function Start-StatsToGraphite
                     }
                     catch
                     {
-                        Write-Error "Caught an exception"
-                        Write-Error "Exception Type: $($_.Exception.GetType().FullName)"
-                        Write-Error "Exception Message: $($_.Exception.Message)"
+                        $exceptionText = GetPrettyProblem $_
+                        Write-Error "An error occurred with processing the SQL Query. $exceptionText"
                     }
                 } #end foreach Query
             } #end foreach SQL Server
@@ -697,9 +696,8 @@ function Send-GraphiteEvent
 
     catch
     {
-        Write-Error "Caught an exception"
-        Write-Error "Exception Type: $($_.Exception.GetType().FullName)"
-        Write-Error "Exception Message: $($_.Exception.Message)"
+        $exceptionText = GetPrettyProblem $_
+        Write-Error "An error occurred trying to post data to Graphite. $exceptionText"
     }
 
 }
@@ -975,9 +973,17 @@ function SendMetrics
         }
         catch
         {
-            Write-Error "Exception Type: $($_.Exception.GetType().FullName)"
-            Write-Error "Exception Message: $($_.Exception.Message)"
-            Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file."
+            $exceptionText = GetPrettyProblem $_
+            Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file. `n$exceptionText"
         }
     }
+}
+
+function GetPrettyProblem {
+    param (
+        $Problem
+    )
+
+    $prettyString = (Out-String -InputObject (format-list -inputobject $Problem -Property * -force)).Trim()
+    return $prettyString
 }
