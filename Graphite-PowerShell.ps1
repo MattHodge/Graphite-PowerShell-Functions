@@ -221,6 +221,7 @@ Function Start-StatsToGraphite
             "DateTime" = $convertedTime
             "UDP" = $Config.SendUsingUDP
             "Verbose" = $Config.ShowOutput
+            "TestMode" = $TestMode
         }
 
         Send-BulkGraphiteMetrics @sendBulkGraphiteMetricsParams
