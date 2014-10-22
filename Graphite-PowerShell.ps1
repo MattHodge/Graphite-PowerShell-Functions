@@ -63,7 +63,7 @@ Function Start-StatsToGraphite
     # Get Last Run Time
     $sleep = 0
 
-    $configFileLastWrite = (Get-Item $configPath).LastWriteTime
+    $configFileLastWrite = (Get-Item -Path $configPath).LastWriteTime
 
     if($ExcludePerfCounters -and -not $SqlMetrics) {
         Write-Error "Parameter combination provided will prevent any metrics from being collected"
@@ -226,7 +226,7 @@ Function Start-StatsToGraphite
         Send-BulkGraphiteMetrics @sendBulkGraphiteMetricsParams
 
         # Reloads The Configuration File After the Loop so new counters can be added on the fly
-        if((Get-Item $configPath).LastWriteTime -gt (Get-Date)) {
+        if((Get-Item $configPath).LastWriteTime -gt (Get-Date -Date $configFileLastWrite)) {
             $Config = Import-XMLConfig -ConfigPath $configPath
         }
 
