@@ -66,8 +66,7 @@ Function Start-StatsToGraphite
     $configFileLastWrite = (Get-Item $configPath).LastWriteTime
 
     if($ExcludePerfCounters -and -not $SqlMetrics) {
-        Write-Error "Parameter combination provided will prevent any metrics from being collected"
-        return
+        throw "Parameter combination provided will prevent any metrics from being collected"
     }
 
     if($SqlMetrics) {
@@ -90,9 +89,7 @@ Function Start-StatsToGraphite
             # If No Snapin's Found end the function
             else
             {
-                Write-Error "Unable to find any SQL CmdLets. Please install them and try again."
-                # End the Function
-                Break
+                throw "Unable to find any SQL CmdLets. Please install them and try again."
             }
         }
         else
@@ -206,7 +203,7 @@ Function Start-StatsToGraphite
                     catch
                     {
                         $exceptionText = GetPrettyProblem $_
-                        Write-Error "An error occurred with processing the SQL Query. $exceptionText"
+                        throw "An error occurred with processing the SQL Query. $exceptionText"
                     }
                 } #end foreach Query
             } #end foreach SQL Server
@@ -697,7 +694,7 @@ function Send-GraphiteEvent
     catch
     {
         $exceptionText = GetPrettyProblem $_
-        Write-Error "An error occurred trying to post data to Graphite. $exceptionText"
+        throw "An error occurred trying to post data to Graphite. $exceptionText"
     }
 
 }
@@ -974,7 +971,7 @@ function SendMetrics
         catch
         {
             $exceptionText = GetPrettyProblem $_
-            Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file. `n$exceptionText"
+            throw "Error sending metrics to the Graphite Server. Please check your configuration file. `n$exceptionText"
         }
     }
 }
