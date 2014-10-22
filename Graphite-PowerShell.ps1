@@ -946,18 +946,18 @@ function SendMetrics
         {
             if ($isUdp)
             {
-                PSUsing ($udpobject = new-Object system.Net.Sockets.Udpclient($CarbonServer, $CarbonServerPort))
-                {
+                PSUsing ($udpobject = new-Object system.Net.Sockets.Udpclient($CarbonServer, $CarbonServerPort)) -ScriptBlock {
                     $enc = new-object system.text.asciiencoding
                     $Message = "$($metric)`r"
                     $byte = $enc.GetBytes($Message)
                     $Sent = $udpobject.Send($byte,$byte.Length)
                 }
+
                 Write-Verbose "Sent via UDP to $($CarbonServer) on port $($CarbonServerPort)."
             }
             else
             {
-                PSUsing ($socket = New-Object System.Net.Sockets.TCPClient) {
+                PSUsing ($socket = New-Object System.Net.Sockets.TCPClient) -ScriptBlock {
                     $socket.connect($CarbonServer, $CarbonServerPort)
                     PSUsing ($stream = $socket.GetStream()) {
                         PSUSing($writer = new-object System.IO.StreamWriter($stream)) {
