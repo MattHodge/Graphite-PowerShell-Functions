@@ -140,8 +140,25 @@ Function Start-StatsToGraphite
                     Write-Verbose "Sample Name: $samplePath"
                 }
 
-                if(-not [string]::IsNullOrWhiteSpace($Config.Filters) -and $sample.Path -notmatch [regex]$Config.Filters) {
-                    $commandMeasurement = Measure-Command -Expression {
+                # Create Stopwatch for Filter Time Period
+                $filterStopWatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+                # Do not do any RegEx checks against the metrics if there are no filters
+                if ([string]::IsNullOrWhiteSpace($Config.Filters))
+                {
+                    # Run the sample path through the ConvertTo-GraphiteMetric function
+                    $cleanNameOfSample = ConvertTo-GraphiteMetric -MetricToClean $sample.Path -RemoveUnderscores -NicePhysicalDisks
+
+                    # Build the full metric path
+                    $metricPath = $Config.MetricPath + '.' + $cleanNameOfSample
+
+                    $metricsToSend[$metricPath] = $sample.Cookedvalue
+                }
+                # Check the samples against the filters using regex
+                else
+                {
+                    if ($sample.Path -notmatch [regex]$Config.Filters)
+                    {
                         # Run the sample path through the ConvertTo-GraphiteMetric function
                         $cleanNameOfSample = ConvertTo-GraphiteMetric -MetricToClean $sample.Path -RemoveUnderscores -NicePhysicalDisks
 
@@ -150,15 +167,18 @@ Function Start-StatsToGraphite
 
                         $metricsToSend[$metricPath] = $sample.Cookedvalue
                     }
+                    else 
+                    {
+                        Write-Verbose "Filtering out Sample Name: $($samplePath) as it matches something in the filters."
+                    }
+                }
 
-                    $DebugOut = 'Job Execution Time To Get to Clean Metrics: ' + $commandMeasurement.TotalSeconds + ' seconds'
-                    Write-Verbose $DebugOut
-                }
-                else {
-                    Write-Verbose "Filtering out Sample Name: $samplePath as it matches something in the filters or filters is empty"
-                }
-            }
-        }
+                $filterStopWatch.Stop()
+
+                Write-Verbose "Job Execution Time To Get to Clean Metrics: $($filterStopWatch.Elapsed.TotalSeconds) seconds."
+                
+            }# End for each sample loop
+        }# end if ExcludePerfCounters
 
         if($SqlMetrics) {
             # Loop through each SQL Server
@@ -207,7 +227,7 @@ Function Start-StatsToGraphite
                     }
                 } #end foreach Query
             } #end foreach SQL Server
-        }
+        }#endif SqlMetrics
 
         # Send To Graphite Server
 
@@ -868,11 +888,16 @@ Function Import-XMLConfig
         $Config.Filters += $MetricFilter.Name + '|'
     }
 
-    $Config.Filters.Trim()
-
     if($Config.Filters.Length -gt 0) {
+        # Trim trailing and leading white spaces
+        $Config.Filters = $Config.Filters.Trim()
+
         # Strip the Last Pipe From the filters string so regex can work against the string.
-        $Config.Filters = $Config.Filters.Substring(0, $Config.Filters.Length - 1)
+        $Config.Filters = $Config.Filters.TrimEnd("|")
+    }
+    else
+    {
+        $Config.Filters = $null
     }
 
     # Below is for SQL Metrics
