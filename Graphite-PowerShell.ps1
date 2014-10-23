@@ -63,7 +63,7 @@ Function Start-StatsToGraphite
     # Get Last Run Time
     $sleep = 0
 
-    $configFileLastWrite = (Get-Item $configPath).LastWriteTime
+    $configFileLastWrite = (Get-Item -Path $configPath).LastWriteTime
 
     if($ExcludePerfCounters -and -not $SqlMetrics) {
         throw "Parameter combination provided will prevent any metrics from being collected"
@@ -218,12 +218,13 @@ Function Start-StatsToGraphite
             "DateTime" = $convertedTime
             "UDP" = $Config.SendUsingUDP
             "Verbose" = $Config.ShowOutput
+            "TestMode" = $TestMode
         }
 
         Send-BulkGraphiteMetrics @sendBulkGraphiteMetricsParams
 
         # Reloads The Configuration File After the Loop so new counters can be added on the fly
-        if((Get-Item $configPath).LastWriteTime -gt (Get-Date)) {
+        if((Get-Item $configPath).LastWriteTime -gt (Get-Date -Date $configFileLastWrite)) {
             $Config = Import-XMLConfig -ConfigPath $configPath
         }
 
@@ -942,18 +943,18 @@ function SendMetrics
         {
             if ($isUdp)
             {
-                PSUsing ($udpobject = new-Object system.Net.Sockets.Udpclient($CarbonServer, $CarbonServerPort))
-                {
+                PSUsing ($udpobject = new-Object system.Net.Sockets.Udpclient($CarbonServer, $CarbonServerPort)) -ScriptBlock {
                     $enc = new-object system.text.asciiencoding
                     $Message = "$($metric)`r"
                     $byte = $enc.GetBytes($Message)
                     $Sent = $udpobject.Send($byte,$byte.Length)
                 }
+
                 Write-Verbose "Sent via UDP to $($CarbonServer) on port $($CarbonServerPort)."
             }
             else
             {
-                PSUsing ($socket = New-Object System.Net.Sockets.TCPClient) {
+                PSUsing ($socket = New-Object System.Net.Sockets.TCPClient) -ScriptBlock {
                     $socket.connect($CarbonServer, $CarbonServerPort)
                     PSUsing ($stream = $socket.GetStream()) {
                         PSUSing($writer = new-object System.IO.StreamWriter($stream)) {
