@@ -76,7 +76,7 @@ Function Start-StatsToGraphite
             if (($listofSQLModules = Get-Module -List SQLPS).Length -eq 1)
             {
                 # Load The SQL Module
-                Import-Module SQLPS
+                Import-Module SQLPS -DisableNameChecking
             }
             # Check for the PS SQL SnapIn
             elseif ((Test-Path ($env:ProgramFiles + '\Microsoft SQL Server\100\Tools\Binn\Microsoft.SqlServer.Management.PSProvider.dll')) `
