@@ -983,7 +983,7 @@ function SendMetrics
         catch
         {
             $exceptionText = GetPrettyProblem $_
-            throw "Error sending metrics to the Graphite Server. Please check your configuration file. `n$exceptionText"
+            Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file. `n$exceptionText"
         }
     }
 }
