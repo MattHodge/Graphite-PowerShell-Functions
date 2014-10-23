@@ -143,8 +143,8 @@ Function Start-StatsToGraphite
                 # Create Stopwatch for Filter Time Period
                 $filterStopWatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-                # Do not do any RegEx checks against the metrics if there are no filters
-                if ([string]::IsNullOrWhiteSpace($Config.Filters))
+                # Check if there are filters or not
+                if ([string]::IsNullOrWhiteSpace($Config.Filters) -or $sample.Path -notmatch [regex]$Config.Filters)
                 {
                     # Run the sample path through the ConvertTo-GraphiteMetric function
                     $cleanNameOfSample = ConvertTo-GraphiteMetric -MetricToClean $sample.Path -RemoveUnderscores -NicePhysicalDisks
@@ -154,23 +154,9 @@ Function Start-StatsToGraphite
 
                     $metricsToSend[$metricPath] = $sample.Cookedvalue
                 }
-                # Check the samples against the filters using regex
                 else
                 {
-                    if ($sample.Path -notmatch [regex]$Config.Filters)
-                    {
-                        # Run the sample path through the ConvertTo-GraphiteMetric function
-                        $cleanNameOfSample = ConvertTo-GraphiteMetric -MetricToClean $sample.Path -RemoveUnderscores -NicePhysicalDisks
-
-                        # Build the full metric path
-                        $metricPath = $Config.MetricPath + '.' + $cleanNameOfSample
-
-                        $metricsToSend[$metricPath] = $sample.Cookedvalue
-                    }
-                    else 
-                    {
-                        Write-Verbose "Filtering out Sample Name: $($samplePath) as it matches something in the filters."
-                    }
+                    Write-Verbose "Filtering out Sample Name: $($samplePath) as it matches something in the filters."
                 }
 
                 $filterStopWatch.Stop()
