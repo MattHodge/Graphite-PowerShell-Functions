@@ -156,13 +156,13 @@ Function Start-StatsToGraphite
                 }
                 else
                 {
-                    Write-Verbose "Filtering out Sample Name: $($samplePath) as it matches something in the filters."
+                    Write-Verbose "Filtering out Sample Name: $($sample.Path) as it matches something in the filters."
                 }
 
                 $filterStopWatch.Stop()
 
                 Write-Verbose "Job Execution Time To Get to Clean Metrics: $($filterStopWatch.Elapsed.TotalSeconds) seconds."
-                
+
             }# End for each sample loop
         }# end if ExcludePerfCounters
 
@@ -182,6 +182,7 @@ Function Start-StatsToGraphite
                         'Query' = $query.TSQL;
                         'ConnectionTimeout' = $Config.MSSQLConnectTimeout;
                         'QueryTimeout' = $Config.MSSQLQueryTimeout
+                        'Verbose' = $PSBoundParameters['Verbose']
                     }
 
                     # Run the Invoke-SqlCmd Cmdlet with a username and password only if they are present in the config file
@@ -499,6 +500,7 @@ function Send-GraphiteMetric
         "Metrics" = $metric
         "IsUdp" = $UDP
         "TestMode" = $TestMode
+        "Verbose" = $PSBoundParameters['Verbose']
     }
 
     SendMetrics @sendMetricsParams
@@ -594,6 +596,7 @@ function Send-BulkGraphiteMetrics
         "Metrics" = $metricStrings
         "IsUdp" = $UDP
         "TestMode" = $TestMode
+        "Verbose" = $PSBoundParameters['Verbose']
     }
 
     SendMetrics @sendMetricsParams
@@ -983,7 +986,7 @@ function SendMetrics
         catch
         {
             $exceptionText = GetPrettyProblem $_
-            Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file. `n$exceptionText"
+            throw "Error sending metrics to the Graphite Server. Please check your configuration file. `n$exceptionText"
         }
     }
 }
