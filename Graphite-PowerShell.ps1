@@ -162,7 +162,7 @@ Function Start-StatsToGraphite
                 $filterStopWatch.Stop()
 
                 Write-Verbose "Job Execution Time To Get to Clean Metrics: $($filterStopWatch.Elapsed.TotalSeconds) seconds."
-                
+
             }# End for each sample loop
         }# end if ExcludePerfCounters
 
@@ -223,7 +223,6 @@ Function Start-StatsToGraphite
             "Metrics" = $metricsToSend
             "DateTime" = $convertedTime
             "UDP" = $Config.SendUsingUDP
-            "Verbose" = $Config.ShowOutput
             "TestMode" = $TestMode
         }
 
@@ -983,7 +982,7 @@ function SendMetrics
         catch
         {
             $exceptionText = GetPrettyProblem $_
-            Write-Error "Error sending metrics to the Graphite Server. Please check your configuration file. `n$exceptionText"
+            throw "Error sending metrics to the Graphite Server. Please check your configuration file. `n$exceptionText"
         }
     }
 }
