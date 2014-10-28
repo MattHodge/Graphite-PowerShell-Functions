@@ -955,8 +955,12 @@ function SendMetrics
             {
                 PSUsing ($udpobject = new-Object system.Net.Sockets.Udpclient($CarbonServer, $CarbonServerPort)) -ScriptBlock {
                     $enc = new-object system.text.asciiencoding
-                    $Message = "$($metric)`r"
-                    $byte = $enc.GetBytes($Message)
+                    $Message = new-object System.Text.StringBuilder
+                    foreach($metric in $metrics) {
+                        $Message.Append($metric)
+                        $Message.Append("`n")
+                    }
+                    $byte = $enc.GetBytes($Message.ToString())
                     $Sent = $udpobject.Send($byte,$byte.Length)
                 }
 
