@@ -106,14 +106,10 @@ Function Start-StatsToGraphite
         # Used to track execution time
         $iterationStopWatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-        # Convert To The TimeZone of the Graphite Server
-        $convertedTime = Convert-TimeZone -DateTime (Get-Date -Format s) -ToTimeZone $Config.TimeZoneOfGraphiteServer
-
-        # Get the TargetTime Part of the Script
-        $convertedTime = $convertedTime.TargetTime
+        $nowUtc = [datetime]::UtcNow
 
         # Round Time to Nearest Time Period
-        $convertedTime = $convertedTime.AddSeconds(- ($convertedTime.Second % $Config.MetricSendIntervalSeconds))
+        $nowUtc = $nowUtc.AddSeconds(- ($nowUtc.Second % $Config.MetricSendIntervalSeconds))
 
         $metricsToSend = @{}
 
@@ -218,7 +214,7 @@ Function Start-StatsToGraphite
             "CarbonServer" = $Config.CarbonServer
             "CarbonServerPort" = $Config.CarbonServerPort
             "Metrics" = $metricsToSend
-            "DateTime" = $convertedTime
+            "DateTime" = $nowUtc
             "UDP" = $Config.SendUsingUDP
             "Verbose" = $Config.ShowOutput
             "TestMode" = $TestMode

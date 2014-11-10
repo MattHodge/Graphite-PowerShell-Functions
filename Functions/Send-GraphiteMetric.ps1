@@ -77,7 +77,7 @@ function Send-GraphiteMetric
     if ($DateTime)
     {
         # Convert to a Unix time without any rounding
-        $UnixTime = (Get-Date $DateTime -UFormat %s) -Replace ("[,\.]\d*", "")
+        $UnixTime = [uint64]$DateTime.ToUniversalTime()
     }
 
     # Create Send-To-Graphite Metric

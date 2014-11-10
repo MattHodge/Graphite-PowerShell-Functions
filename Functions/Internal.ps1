@@ -1,99 +1,3 @@
-function Convert-TimeZone
-{
-    <#
-        .Synopsis
-           Coverts from a given time zone to the specified time zone.
-
-        .Description
-            Coverts from a given time zone to the specified time zone.
-
-        .Parameter DateTime
-            A DateTime object will be converted to the new time zone.
-
-        .Parameter ToTimeZone
-            The name of the target time zone you wish to convert to. You can get the names by using the -ListTimeZones parameter.
-
-        .Parameter ListTimeZones
-            Lists all the time zones that can be used.
-
-        .Example
-            Convert-TimeZone -ListTimeZones
-
-            Id                         : Dateline Standard Time
-            DisplayName                : (UTC-12:00) International Date Line West
-            StandardName               : Dateline Standard Time
-            DaylightName               : Dateline Daylight Time
-            BaseUtcOffset              : -12:00:00
-            SupportsDaylightSavingTime : False
-
-            Id                         : UTC-11
-            DisplayName                : (UTC-11:00) Coordinated Universal Time-11
-            StandardName               : UTC-11
-            DaylightName               : UTC-11
-            BaseUtcOffset              : -11:00:00
-            SupportsDaylightSavingTime : False
-
-            Lists available time zones to convert to.
-
-        .Example
-            Convert-TimeZone -DateTime (Get-Date) -ToTimeZone UTC
-
-            Converts current time to UTC time.
-
-        .Notes
-            NAME:      Convert-TimeZone
-            AUTHOR:    Matthew Hodgkins
-            WEBSITE:   http://www.hodgkins.net.au
-
-    #>
-
-    param
-    (
-        [CmdletBinding(DefaultParametersetName = 'Convert Time Zone')]
-
-        [Parameter(Mandatory = $true,
-                   ParameterSetName = 'Convert Time Zone')]
-        [ValidateNotNull()]
-        [ValidateNotNullOrEmpty()]
-        [datetime]$DateTime,
-
-        [Parameter(Mandatory = $true,
-                   ParameterSetName = 'Convert Time Zone')]
-        [ValidateNotNull()]
-        [ValidateNotNullOrEmpty()]
-        [string]$ToTimeZone,
-
-        [Parameter(Mandatory = $false,
-                   ParameterSetName = 'List Time Zones')]
-        [switch]$ListTimeZones
-    )
-
-    # Loading dll for Windows 2003 R2
-    [void][System.Reflection.Assembly]::LoadWithPartialName('System.Core')
-
-    # List TimeZones for the user
-    if ($ListTimeZones)
-    {
-        [System.TimeZoneInfo]::GetSystemTimeZones()
-        return
-    }
-
-    # Run the Function
-    else
-    {
-        $TimeZoneObject = [System.TimeZoneInfo]::FindSystemTimeZoneById($ToTimeZone)
-        $TargetZoneTime = [System.TimeZoneInfo]::ConvertTime($DateTime, $TimeZoneObject)
-        $OutObject = New-Object -TypeName PSObject -Property @{
-            LocalTime = $DateTime
-            LocalTimeZone = $(([System.TimeZoneInfo]::LOCAL).id)
-            TargetTime = $TargetZoneTime
-            TargetTimeZone = $($TimeZoneObject.id)
-        }
-
-        Write-Output $OutObject
-    }
-}
-
 Function Import-XMLConfig
 {
 <#
@@ -134,9 +38,6 @@ Function Import-XMLConfig
 
     #Get Metric Send Interval From Config
     [int]$Config.MetricSendIntervalSeconds = $xmlfile.Configuration.Graphite.MetricSendIntervalSeconds
-
-    # Get the Timezone Of the Graphite Server
-    $Config.TimeZoneOfGraphiteServer = $xmlfile.Configuration.Graphite.TimeZoneOfGraphiteServer
 
     # Convert Value in Configuration File to Bool for Sending via UDP
     [bool]$Config.SendUsingUDP = [System.Convert]::ToBoolean($xmlfile.Configuration.Graphite.SendUsingUDP)
