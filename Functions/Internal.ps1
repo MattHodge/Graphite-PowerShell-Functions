@@ -160,6 +160,7 @@ Function Import-XMLConfig
         $Config.Counters += $counter.Name
     }
 
+    $Config.Filters = [string]::Empty;
     # Load each row from the configuration file into the counter array
     foreach ($MetricFilter in $xmlfile.Configuration.Filtering.MetricFilter)
     {
