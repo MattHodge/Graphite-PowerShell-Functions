@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Configuration>
     <Graphite>
-        <CarbonServer>yourCarbonServerNameOrIP</CarbonServer>
+        <CarbonServer>192.168.59.103</CarbonServer>
         <CarbonServerPort>2003</CarbonServerPort>
         <MetricPath>datacenter1.servers</MetricPath>
         <MetricSendIntervalSeconds>5</MetricSendIntervalSeconds>
