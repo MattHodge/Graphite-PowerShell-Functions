@@ -9,7 +9,7 @@ More details at [http://www.hodgkins.net.au/mswindows/using-powershell-to-send-m
 * Sends Metrics to Graphite's Carbon daemon using TCP or UDP
 * Can collect Windows Performance Counters
 * Can collect values by using T-SQL queries against MS SQL databases
-* Will convert time zones; If the server you want the metrics sent from is in a different time zone to your Graphite server, the script will convert the time so metrics come in with a time that matches the Graphite server
+* Converts time to UTC on sending
 * All configuration can be done from a simple XML file
 * Reloads the XML configuration file automatically. For example, if more counters are added to the configuration file, the script will notice and start sending metrics for them to Graphite in the next send interval
 * Additional functions are exposed that allow you to send data to Graphite from PowerShell easily. [Here](#functions) is the list of included functions
@@ -19,10 +19,13 @@ More details at [http://www.hodgkins.net.au/mswindows/using-powershell-to-send-m
 
 ## Installation
 
-1. Download the *Graphite-PowerShell.ps1* file and the *StatsToGraphiteConfig.xml* configuration file into the same directory, for example *C:\GraphitePowerShell*
-2. Make sure the files are un-blocked by right clicking on them and going to properties.
-3. Modify *StatsToGraphiteConfig.xml* configuration file. Instructions [here](#config).
-4. Open PowerShell and ensure you set your Execution Policy to allow scripts be run. For example `Set-ExecutionPolicy RemoteSigned`.
+1. Download the repository and place into a PowerShell Modules directory called **Graphite-Powershell**. The module directories can be found by running `$env:PSModulePath` in PowerShell. For example, `C:\Program Files\WindowsPowerShell\Modules\Graphite-PowerShell`
+1. Verify your folder structure looks like this, with the *.psd1* and *.psm1* files inside the **Graphite-Powershell** folder:
+
+ ![alt text](http://i.imgur.com/4wE9Xq5.jpg "Start-StatsToGraphite with Verbose Output")
+3. Make sure the files are un-blocked by right clicking on them and going to properties.
+4. Modify the *StatsToGraphiteConfig.xml* configuration file. Instructions [here](#config).
+5. Open PowerShell and ensure you set your Execution Policy to allow scripts be run. For example `Set-ExecutionPolicy RemoteSigned`.
 
 ### Modifying the Configuration File
 
@@ -36,8 +39,7 @@ CarbonServer | The server name where Carbon is running. The Carbon daemon is usu
 CarbonServerPort | The port number for Carbon. Its default port number is 2003.
 MetricPath | The path of the metric you want to be sent to the server. If you are using HostedGraphite, put your API key before the rest of the metric path, for example `YOUR-API-KEY.datacenter1.servers`.
 MetricSendIntervalSeconds | The interval to send metrics to Carbon; I recommend 5 seconds or greater. The more metrics you are collecting the longer it takes to send them to the Graphite server. You can see how long it takes to send the metrics each time the loop runs by using running the `Start-StatsToGraphite` function and having *VerboseOutput* set to *True*.
-TimeZoneOfGraphiteServer | Set this to the time zone of your Graphite server and the **Start-StatsToGraphite** function will convert the local time zone of the server to the time zone of the Graphite server. This is useful if you have servers in different time zones. To get a list of valid options run **Convert-TimeZone -ListTimeZones** and use the applicable ID.
-SendUsingUDP | Sends metrics via UDP instead of TCP. This doesn't seem to work with HostedGraphite, but works with self-hosted.
+SendUsingUDP | Sends metrics via UDP instead of TCP.
 
 #### Performance Counters Configuration Section
 
@@ -101,11 +103,11 @@ VerboseOutput | Will provide each of the metrics that were sent over to Carbon a
 
 The following shows how to use the `Start-StatsToGraphite`, which will collect Windows performance counters and send them to Graphite.
 
-1. In PowerShell, enter the directory in which you downloaded the script.
-2. Dot source the script by running `. .\Graphite-PowerShell.ps1`
-3. Start the script by using the function `Start-StatsToGraphite`. If you want Verbose detailed use `Start-StatsToGraphite -Verbose`.
+1. Open PowerShell
+2. Import the Module by running `Import-Module -Name Graphite-PowerShell`
+3. Start the script by using the function `Start-StatsToGraphite`. If you want Verbose details, use `Start-StatsToGraphite -Verbose`.
 
-You may need to run the PowerShell instance with Administrative rights depending on the performance counters you want to access. This is due to the scripts use of the `Get-Counter` CmdLet. 
+You may need to run the PowerShell instance with Administrative rights depending on the performance counters you want to access. This is due to the scripts use of the `Get-Counter` CmdLet.
 
 From the [Get-Counter help page on TechNet](http://technet.microsoft.com/library/963e9e51-4232-4ccf-881d-c2048ff35c2a(v=wps.630).aspx):
 
@@ -121,8 +123,8 @@ That is all there is to getting your Windows performance counters into Graphite.
 
 The following shows how to use the `Start-SQLStatsToGraphite`, which will execute any SQL queries listed in the configuration file and send the result (which needs to be an integer) to Graphite.
 
-1. In PowerShell, enter the directory in which you downloaded the script.
-2. Dot source the script by running `. .\Graphite-PowerShell.ps1`
+1. Open PowerShell
+2. Import the Module by running `Import-Module -Name Graphite-PowerShell`
 3. Start the script by using the function `Start-SQLStatsToGraphite`. If you want Verbose detailed use `Start-SQLStatsToGraphite -Verbose`. If you want to see what would be sent to Graphite, without actually sending the metrics, use `Start-SQLStatsToGraphite -Verbose -TestMode`
 
 The below image is what `Start-SQLStatsToGraphite` like with **VerboseOutput** turned on in the XML configuration file looks like.
@@ -131,7 +133,7 @@ The below image is what `Start-SQLStatsToGraphite` like with **VerboseOutput** t
 
 This function requires the Microsoft SQL PowerShell Modules/SnapIns. The easiest way to get these is to download them from the [SQL 2012 R2 SP1 Feature Pack](http://www.microsoft.com/en-us/download/details.aspx?id=35580). You will need to grab the following:
 * Microsoft® SQL Server® 2012 Shared Management Object
-* Microsoft® System CLR Types for Microsoft® SQL Server® 2012 
+* Microsoft® System CLR Types for Microsoft® SQL Server® 2012
 * Microsoft® Windows PowerShell Extensions for Microsoft® SQL Server® 2012
 
 ## Installing as a Service
@@ -144,7 +146,7 @@ The easiest way to achieve this is using NSSM - the Non-Sucking Service Manager.
 2. Open up an Administrative command prompt and run `nssm install GraphitePowerShell`. (You can call the service whatever you want).
 3. A dialog will pop up allowing you to enter in settings for the new service. The following two tables below contains the settings to use.
 
-![alt text](http://i.imgur.com/xkiRZgu.jpg "NSSM Dialog")
+![alt text](http://i.imgur.com/sDjBcjl.jpg "NSSM Dialog")
 
 4. Click *Install Service*
 5. Make sure the service is started and it is set to Automatic
@@ -154,46 +156,44 @@ The below configurations will show how to run either `Start-StatsToGraphite` or 
 
 ### Running Start-StatsToGraphite as a Service
 
-The following configuration can be used to run `Start-StatsToGraphite` as a service. 
+The following configuration can be used to run `Start-StatsToGraphite` as a service.
 
 Setting Name | Value
 --- | ---
 Path | C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
-Startup Directory | C:\GraphitePowerShell
-Options | -command "& { . C:\GraphitePowerShell\Graphite-PowerShell.ps1; Start-StatsToGraphite }"
+Startup Directory | Leave Blank
+Options | -command "& { Import-Module -Name Graphite-PowerShell ; Start-StatsToGraphite }"
 
 ### Running Start-SQLStatsToGraphite as a Service
 
-The following configuration can be used to run `Start-SQLStatsToGraphite` as a service. 
+The following configuration can be used to run `Start-SQLStatsToGraphite` as a service.
 
 Setting Name | Value
 --- | ---
 Path | C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
-Startup Directory | C:\GraphitePowerShell
-Options | -command "& { . C:\GraphitePowerShell\Graphite-PowerShell.ps1; Start-SQLStatsToGraphite }"
+Startup Directory | Leave Blank
+Options | -command "& { Import-Module -Name Graphite-PowerShell ; Start-SQLStatsToGraphite }"
 
 If you want to remove a service, read the NSSM documentation [http://nssm.cc/commands](http://nssm.cc/commands) for instructions.
 
 ### Installing as a Service Using PowerShell
-1. Download nssm from [nssm.cc](http://nssm.cc) and save it into your `C:\GraphitePowerShell` directory
-2. Open an Administrative PowerShell console
-3. Run `Start-Process -FilePath .\nssm.exe -ArgumentList 'install GraphitePowerShell "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" "-command "& { . C:\GraphitePowerShell\Graphite-PowerShell.ps1; Start-StatsToGraphite }"" ' -NoNewWindow -Wait`
+1. Download nssm from [nssm.cc](http://nssm.cc) and save it into a directory
+2. Open an Administrative PowerShell consolen and browse to the directory you saved NSSM
+3. Run `Start-Process -FilePath .\nssm.exe -ArgumentList 'install GraphitePowerShell "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" "-command "& { Import-Module -Name Graphite-PowerShell ; Start-StatsToGraphite }"" ' -NoNewWindow -Wait`
 4. Check the service installed successfully `Get-Service -Name GraphitePowerShell`
 5. Start the service `Start-Service -Name GraphitePowerShell`
 
 ## <a name="functions">Included Functions</a>
 
-There are several functions that are exposed by the script which available to use in an ad-hoc manner.
+There are several functions that are exposed by the module which are available to use in an ad-hoc manner.
 
-For full help for these functions run the PowerShell command `Get-Help | <Function Name>`
+For a list of functions in the module, run `Get-Command -Module Graphite-PowerShell`. For full help for these functions run `Get-Help | <Function Name>`
 
 Function Name | Description
 --- | ---
-Start-StatsToGraphite | The function to collect Windows Performance Counters. This is an endless loop which will send metrics to Graphite. 
-Start-SQLStatsToGraphite | The function to query SQL. This is an endless loop which will send metrics to Graphite. 
-Send-GraphiteEvent | Sends an event to Graphite using the Graphite Event API. More information about the events API can be found [in this blog post](http://obfuscurity.com/2014/01/Graphite-Tip-A-Better-Way-to-Store-Events).
 ConvertTo-GraphiteMetric | Takes the Windows Performance counter name and coverts it to something that Graphite can use.
-Send-GraphiteMetric | Allows you to send metrics to Graphite in an ad-hoc manner.
 Send-BulkGraphiteMetrics | Sends several Graphite Metrics to a Carbon server with one request. Bulk requests save a lot of resources for Graphite server.
-Convert-TimeZone | Converts from one time zone to another.
-Import-XMLConfig | Loads the XML Configuration file. Not really useful out side of the script.
+Send-GraphiteEvent | Sends an event to Graphite using the Graphite Event API. More information about the events API can be found [in this blog post](http://obfuscurity.com/2014/01/Graphite-Tip-A-Better-Way-to-Store-Events).
+Send-GraphiteMetric | Allows you to send metrics to Graphite in an ad-hoc manner.
+Start-SQLStatsToGraphite | The function to query SQL. This is an endless loop which will send metrics to Graphite.
+Start-StatsToGraphite | The function to collect Windows Performance Counters. This is an endless loop which will send metrics to Graphite.
