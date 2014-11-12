@@ -4,6 +4,7 @@
         <CarbonServer>yourCarbonServerNameOrIP</CarbonServer>
         <CarbonServerPort>2003</CarbonServerPort>
         <MetricPath>datacenter1.servers</MetricPath>
+        <NodeHostName>$env:COMPUTERNAME</NodeHostName>
         <MetricSendIntervalSeconds>5</MetricSendIntervalSeconds>
         <SendUsingUDP>False</SendUsingUDP>
     </Graphite>

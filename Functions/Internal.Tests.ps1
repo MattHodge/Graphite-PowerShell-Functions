@@ -11,8 +11,8 @@ Describe "Importing of XML Configuration File" {
         It "Loaded Configuration File Should Not Be Empty" {
             $Config | Should Not BeNullOrEmpty
         }
-        It "Should Have 15 Properties" {
-            $Config.Count | Should Be 15
+        It "Should Have 16 Properties" {
+            $Config.Count | Should Be 16
         }
         It "SendUsingUDP should be Boolean" {
             $Config.SendUsingUDP -is [Boolean] | Should Be $true

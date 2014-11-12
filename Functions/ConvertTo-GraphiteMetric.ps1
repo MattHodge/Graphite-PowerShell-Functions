@@ -16,13 +16,26 @@ Function ConvertTo-GraphiteMetric
     .Parameter NicePhysicalDisks
         Makes the physical disk perf counters prettier
 
-    .Example
-        PS> ConvertTo-GraphiteMetric -MetricToClean "\Processor(_Total)\% Processor Time"
-            .Processor._Total.ProcessorTime
+    .Parameter HostName
+        Allows you to override the hostname of the metrics before sending. Default is not to override and use what the Windows Performance Counters provide.
 
     .Example
-        PS> ConvertTo-GraphiteMetric -MetricToClean "\Processor(_Total)\% Processor Time" -RemoveUnderscores
-            .Processor.Total.ProcessorTime
+        PS> ConvertTo-GraphiteMetric -MetricToClean "\\myServer\network interface(realtek pcie gbe family controller)\bytes received/sec"
+            myServer.networkinterface.realtekpciegbefamilycontroller.bytesreceived-sec
+
+            Cleaning a Windows Performance Counter so its ready for Graphite.
+
+    .Example
+        PS> ConvertTo-GraphiteMetric -MetricToClean "\\myServer\Processor(_Total)\% Processor Time" -RemoveUnderscores
+            myServer.Processor.Total.ProcessorTime
+
+            Cleaning a Windows Performance Counter so its ready for Graphite and removing underscores.
+
+    .Example
+        PS> ConvertTo-GraphiteMetric -MetricToClean "\\myServer\Processor(_Total)\% Processor Time" -RemoveUnderscores -HostName myserver.production.net
+            myserver.production.net.Processor.Total.ProcessorTime
+
+            Cleaning a Windows Performance Counter so its ready for Graphite and removing underscores. Replacing HostName with custom name.
 
     .Notes
         NAME:      ConvertTo-GraphiteMetric
@@ -39,8 +52,17 @@ Function ConvertTo-GraphiteMetric
         [switch]$RemoveUnderscores,
 
         [parameter(Mandatory = $false)]
-        [switch]$NicePhysicalDisks
+        [switch]$NicePhysicalDisks,
+
+        [parameter(Mandatory = $false)]
+        [string]$HostName=$env:COMPUTERNAME
     )
+
+    # If HostName is being overwritten
+    if ($HostName -ne $env:COMPUTERNAME)
+    {
+        $MetricToClean = $MetricToClean -replace "\\\\$($env:COMPUTERNAME)\\","\\$($HostName)\"
+    }
 
     # Removing Beginning Backslashes"
     $cleanNameOfSample = $MetricToClean -replace '^\\\\', ''

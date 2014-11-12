@@ -11,6 +11,7 @@ More details at [http://www.hodgkins.net.au/mswindows/using-powershell-to-send-m
 * Can collect values by using T-SQL queries against MS SQL databases
 * Converts time to UTC on sending
 * All configuration can be done from a simple XML file
+* Allows you to override the hostname in Windows Performance Counters before sending on to Graphite
 * Reloads the XML configuration file automatically. For example, if more counters are added to the configuration file, the script will notice and start sending metrics for them to Graphite in the next send interval
 * Additional functions are exposed that allow you to send data to Graphite from PowerShell easily. [Here](#functions) is the list of included functions
 * Script can be installed to run as a service
@@ -38,6 +39,7 @@ Configuration Name | Description
 CarbonServer | The server name where Carbon is running. The Carbon daemon is usually running on the Graphite server.
 CarbonServerPort | The port number for Carbon. Its default port number is 2003.
 MetricPath | The path of the metric you want to be sent to the server. If you are using HostedGraphite, put your API key before the rest of the metric path, for example `YOUR-API-KEY.datacenter1.servers`.
+NodeHostName | This allows you to override the hostname of the server before sending the metrics on to Graphite. Default is use `$env:COMPUTERNAME`, which will use the local computer name.
 MetricSendIntervalSeconds | The interval to send metrics to Carbon; I recommend 5 seconds or greater. The more metrics you are collecting the longer it takes to send them to the Graphite server. You can see how long it takes to send the metrics each time the loop runs by using running the `Start-StatsToGraphite` function and having *VerboseOutput* set to *True*.
 SendUsingUDP | Sends metrics via UDP instead of TCP.
 

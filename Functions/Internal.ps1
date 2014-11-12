@@ -32,11 +32,20 @@ Function Import-XMLConfig
     # Load Configuration File
     $xmlfile = [xml]([System.IO.File]::ReadAllText($configPath))
 
-    #Set the Graphite carbon server location and port number
+    # Set the Graphite carbon server location and port number
     $Config.CarbonServer = $xmlfile.Configuration.Graphite.CarbonServer
     $Config.CarbonServerPort = $xmlfile.Configuration.Graphite.CarbonServerPort
 
-    #Get Metric Send Interval From Config
+    # Get the HostName to use for the metrics from the config file
+    $Config.NodeHostName = $xmlfile.Configuration.Graphite.NodeHostName
+    
+    # Set the NodeHostName to ComputerName
+    if($Config.NodeHostName -eq '$env:COMPUTERNAME')
+    {
+        $Config.NodeHostName = $env:COMPUTERNAME
+    }
+
+    # Get Metric Send Interval From Config
     [int]$Config.MetricSendIntervalSeconds = $xmlfile.Configuration.Graphite.MetricSendIntervalSeconds
 
     # Convert Value in Configuration File to Bool for Sending via UDP
