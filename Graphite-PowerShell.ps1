@@ -1,4 +1,4 @@
-ï»¿# Determine The Path Of The XML Config File
+# Determine The Path Of The XML Config File
 $configPath = [string](Split-Path -Parent $MyInvocation.MyCommand.Definition) + '\StatsToGraphiteConfig.xml'
 
 Function Start-StatsToGraphite
@@ -49,10 +49,28 @@ Function Start-StatsToGraphite
         # Update the Last Run Time and Use To Track How Long Execution Took
         $lastRunTime = Get-Date
         
+        $wildcards = @( '*' )
         $CountersNames = @()
+        $WildcardCounters = @()
+
         ForEach($Key in $Config.Counters.Keys)
         {
             $CountersNames += $Key
+			ForEach ($wildcard in $wildcards)
+			{
+				If ($Key.contains($wildcard))
+				{
+					$CounterKeySplit = $Key.split($wildcard)
+					$CounterValueSplit = ($Config.Counters[$Key]).split($wildcard)
+					$WildcardCounter = New-Object PSObject -Property @{
+						prefixCounter		=	$CounterKeySplit[0].toLower()
+						postfixCounter		=	$CounterKeySplit[1].toLower()
+						prefixMetric		=	$CounterValueSplit[0].toLower()
+						postfixMetric		=	$CounterValueSplit[1].toLower()
+					}
+					$WildcardCounters += $WildcardCounter
+				}
+			}
         }
 
         # Take the Sample of the Counter
@@ -87,7 +105,7 @@ Function Start-StatsToGraphite
             if ($sample.Path -notmatch [regex]$Config.Filters)
             {
                 # Run the sample path through the ConvertTo-GraphiteMetric function
-                $cleanNameOfSample = ConvertTo-GraphiteMetric -MetricToClean $sample.Path -RemoveUnderscores -NicePhysicalDisks
+                $cleanNameOfSample = ConvertTo-GraphiteMetric -MetricToClean $sample.Path -RemoveUnderscores -NicePhysicalDisks -WildcardCounters $WildcardCounters
                 
                 $DebugOut = 'Job Execution Time To Get to Clean Metrics: ' + ((Get-Date) - $lastRunTime).TotalSeconds + ' seconds'
                 Write-Verbose $DebugOut
@@ -143,9 +161,9 @@ Function Start-SQLStatsToGraphite
         Starts a loop which sends the result of SQL queries defined in the configuration file to Graphite. Configuration is all done from the StatsToGraphiteConfig.xml file. The specified SQL commands must return a single row containing a number.
         
         This function requires the Microsoft SQL PowerShell Modules/SnapIns. The easiest way to get these on your server is to download them from the SQL 2012 R2 Feature Pack. You will need to grab the following:
-        - MicrosoftÂ® SQL ServerÂ® 2012 Shared Management Object
-        - MicrosoftÂ® System CLR Types for MicrosoftÂ® SQL ServerÂ® 2012 
-        - MicrosoftÂ® Windows PowerShell Extensions for MicrosoftÂ® SQL ServerÂ® 2012
+        - Microsoft® SQL Server® 2012 Shared Management Object
+        - Microsoft® System CLR Types for Microsoft® SQL Server® 2012 
+        - Microsoft® Windows PowerShell Extensions for Microsoft® SQL Server® 2012
 
     .Parameter Verbose
         Provides Verbose output which is useful for troubleshooting
@@ -184,7 +202,7 @@ Function Start-SQLStatsToGraphite
     # Run The Load XML Config Function
     $Config = Import-XMLConfig -ConfigPath $configPath
     
-    # Doesnâ€™t Run Unless there is SQL Servers in the config file
+    # Doesn’t Run Unless there is SQL Servers in the config file
     if ($Config.MSSQLServers.Length -eq 0)
     {
         Write-Error "There are no SQL Servers in your configuration file. Please add some before running this CmdLet"
@@ -358,6 +376,9 @@ Function ConvertTo-GraphiteMetric
     .Parameter NicePhysicalDisks
         Makes the physical disk perf counters prettier
 
+    .Parameter WildcardCounters
+        Wildcard metrics
+
     .Example
         PS> ConvertTo-GraphiteMetric -MetricToClean "\Processor(_Total)\% Processor Time"
             .Processor._Total.ProcessorTime
@@ -381,17 +402,38 @@ Function ConvertTo-GraphiteMetric
         [switch]$RemoveUnderscores,
         
         [parameter(Mandatory = $false)]
-        [switch]$NicePhysicalDisks
+        [switch]$NicePhysicalDisks,
+
+        [parameter(Mandatory = $false)]
+        [PSObject]$WildcardCounters
     )
     
     # Removing Beginning Backslashes"
     $MetricToClean = $MetricToClean -replace '^\\\\', ''
- 
+
     # We remove the hostname to verify if a metric name was specified
     $regex = [regex]'^[a-zA-Z0-9-]+\\'
     $rawMetricToClean = $MetricToClean -replace $regex, '\'
 
-    $rawMetricName = $Config.Counters[$rawMetricToClean]
+    ForEach ($WildcardCounter in $WildcardCounters)
+    {
+	$prefixCounter = $wildcardCounter.prefixCounter
+	$postfixCounter = $wildcardCounter.postfixCounter
+	$prefixMetric = $wildcardCounter.prefixMetric
+	$postfixMetric = $wildcardCounter.postfixMetric
+
+        If ($rawMetricToClean.StartsWith($prefixCounter) -and $rawMetricToClean.EndsWith($postfixCounter))
+        {
+            $expandedWildcard = ($rawMetricToClean -split $prefixCounter,0,"simplematch")[1]
+            $expandedWildcard = ($expandedWildcard -split $postfixCounter,0,"simplematch")[0]
+            $rawMetricName = $prefixMetric, $expandedWildcard, $postfixMetric -join ""
+	}
+    }
+
+    if (! $rawMetricName)
+    {
+        $rawMetricName = $Config.Counters[$rawMetricToClean]
+    }
 
     If ($rawMetricName)
     {
@@ -401,7 +443,7 @@ Function ConvertTo-GraphiteMetric
     {
         # Replacing Backslashes After ServerName With dot"
         $cleanNameOfSample = $MetricToClean -replace '\\\\', '.'
- 
+
         # Removing Replacing Colon with Dot"
         $cleanNameOfSample = $cleanNameOfSample -replace ':', '.'
 
@@ -438,7 +480,7 @@ Function ConvertTo-GraphiteMetric
             $cleanNameOfSample = $cleanNameOfSample -replace '_', ''
         }
     }
- 
+
     if ($NicePhysicalDisks)
     {
         Write-Verbose "NicePhyiscalDisks switch is enabled"
@@ -946,7 +988,7 @@ Function Import-XMLConfig
         {
             $Metric = $Counter.Metric
         }
-        $Config.Counters.Add($counter.Name,$Metric)
+        $Config.Counters.Add($Counter.Name,$Metric)
     }
     
     # Use the filters to create a RegEx string
