@@ -111,10 +111,10 @@ Function ConvertTo-GraphiteMetric
         Write-Verbose "NicePhyiscalDisks switch is enabled"
 
         # Get Drive Letter
-        $driveLetter = ([regex]'physicaldisk\.\d([a-zA-Z])').match($cleanNameOfSample).groups[1].value
+        $driveLetter = ([regex]'physicaldisk\.[0-9]+([a-zA-Z])').match($cleanNameOfSample).groups[1].value
 
         # Add -drive to the drive letter
-        $cleanNameOfSample = $cleanNameOfSample -replace 'physicaldisk\.\d([a-zA-Z])', ('physicaldisk.' + $driveLetter + '-drive')
+        $cleanNameOfSample = $cleanNameOfSample -replace 'physicaldisk\.[0-9]+([a-zA-Z])', ('physicaldisk.' + $driveLetter + '-drive')
 
         # Get the new cleaned drive letter
         $niceDriveLetter = ([regex]'physicaldisk\.(.*)\.avg\.').match($cleanNameOfSample).groups[1].value
