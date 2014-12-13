@@ -12,6 +12,7 @@ More details at [http://www.hodgkins.net.au/mswindows/using-powershell-to-send-m
 * Converts time to UTC on sending
 * All configuration can be done from a simple XML file
 * Allows you to override the hostname in Windows Performance Counters before sending on to Graphite
+* Allows renaming of metric names using regex via the configuration file
 * Reloads the XML configuration file automatically. For example, if more counters are added to the configuration file, the script will notice and start sending metrics for them to Graphite in the next send interval
 * Additional functions are exposed that allow you to send data to Graphite from PowerShell easily. [Here](#functions) is the list of included functions
 * Script can be installed to run as a service
@@ -55,6 +56,23 @@ Here are some other examples:
 * `<Counter Name="\Web Service(YourIISWebSite)\Total Bytes Sent"/>`
 * `<Counter Name="\ASP.NET Apps v4.0.30319(_lm_w3svc_1_Root_YourIISApp)\Request Wait Time"/>`
 * `<Counter Name="\PhysicalDisk(*)\Avg. Disk Write Queue Length"/>`
+
+#### MetricReplace Configuration Section
+
+This section lists regex find and replace rules used to clean up the Windows performance counters before sending them on to Graphite. Most people will be able to leave this section alone as it configured using sensible defaults.
+
+The script processes these in the order they appear in the configuration file. **Order is important!**
+
+There are two methods for replacing metrics with custom names:
+
+1. **Replace with custom value.** This does a regex search on `This`, and replaces it with the value in `With`. For example:
+`<MetricReplace This="\#" With="num"/>`
+This would find the *#* symbol and replace it with the text *num*
+1. **Replace with RegEx capture group.** This does a regex search on `This`, and then replaces it with the value in `With`. It then uses the RegEx capture that was found and substities it for `#{CAPTUREGROUP}`. This this will only work for the first capture. For example:
+`<MetricReplace This="physicaldisk\(.* (.*)\:\)" With="physicaldisk.#{CAPTUREGROUP}-drive"/>`
+This would capture the drive letter of the phyiscal disk, and replace the whole string with physicaldisk.*DriverLetter*-drive.
+
+If you want to use the regex capture replace, I recommend doing this first, as it's easier to capture these sections before the metrics get cleaned.
 
 #### Filtering Configuration Section
 
