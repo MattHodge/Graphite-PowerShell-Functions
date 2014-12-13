@@ -12,7 +12,7 @@ Describe "Importing of XML Configuration File" {
             $Config | Should Not BeNullOrEmpty
         }
         It "Should Have 16 Properties" {
-            $Config.Count | Should Be 16
+            $Config.Count | Should Be 17
         }
         It "SendUsingUDP should be Boolean" {
             $Config.SendUsingUDP -is [Boolean] | Should Be $true
@@ -34,6 +34,9 @@ Describe "Importing of XML Configuration File" {
         }
         It "MSSQLMetricTimeSpan should be TimeSpan" {
             $Config.MSSQLMetricTimeSpan -is [TimeSpan] | Should Be $true
+        }
+        It "MetricReplace should be HashTable" {
+            $Config.MetricReplace -is [System.Collections.Specialized.OrderedDictionary] | Should Be $true
         }
     }
 }

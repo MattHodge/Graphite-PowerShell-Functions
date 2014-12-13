@@ -70,6 +70,16 @@ Function Import-XMLConfig
         $Config.Counters += $counter.Name
     }
 
+    # Create the Metric Cleanup Hashtable
+    $Config.MetricReplace = New-Object System.Collections.Specialized.OrderedDictionary
+
+    # Load metric cleanup config
+    ForEach ($metricreplace in $xmlfile.Configuration.MetricCleaning.MetricReplace)
+    {
+        # Load each MetricReplace into an array
+        $Config.MetricReplace.Add($metricreplace.This,$metricreplace.With)
+    }
+
     $Config.Filters = [string]::Empty;
     # Load each row from the configuration file into the counter array
     foreach ($MetricFilter in $xmlfile.Configuration.Filtering.MetricFilter)
