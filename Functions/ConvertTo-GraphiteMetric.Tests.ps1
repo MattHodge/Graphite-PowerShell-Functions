@@ -30,6 +30,46 @@ Describe "ConvertTo-GraphiteMetric" {
             $TestMetric | Should Match "\."
         }
     }
+    Context "Metric Transformation - Using MetricReplacementHash" {
+
+        $MockHashTable = [ordered]@{
+        "^\\\\" = "";
+        "\\\\" = "";
+        "\/" = "-";
+        ":" = ".";
+        "\\" = ".";
+        "\(" = ".";
+        "\)" = "";
+        "\]" = "";
+        "\[" = "";
+        "\%" = "";
+        "\s+" = "";
+        "\.\." = ".";
+        "_" = ""
+        }
+
+        It "Should Return Something" {
+            ConvertTo-GraphiteMetric -MetricToClean "\\myServer\network interface(realtek pcie gbe family controller)\bytes received/sec" -MetricReplacementHash $MockHashTable | Should Not BeNullOrEmpty
+        }
+        It "Should Provide myServer.networkinterface.realtekpciegbefamilycontroller.bytesreceived-sec as Output" {
+            ConvertTo-GraphiteMetric -MetricToClean "\\myServer\network interface(realtek pcie gbe family controller)\bytes received/sec" -MetricReplacementHash $MockHashTable | Should MatchExactly "myServer.networkinterface.realtekpciegbefamilycontroller.bytesreceived-sec"
+        }
+        It "Should Not Contain Left Parentheses" {
+            ConvertTo-GraphiteMetric -MetricToClean "\\myServer\network interface(realtek pcie gbe family controller)\bytes received/sec" -MetricReplacementHash $MockHashTable | Should Not Match "\("
+        }
+        It "Should Not Contain Right Parentheses" {
+            ConvertTo-GraphiteMetric -MetricToClean "\\myServer\network interface(realtek pcie gbe family controller)\bytes received/sec" -MetricReplacementHash $MockHashTable | Should Not Match "\)"
+        }
+        It "Should Not Contain Forward Slash" {
+            ConvertTo-GraphiteMetric -MetricToClean "\\myServer\network interface(realtek pcie gbe family controller)\bytes received/sec" -MetricReplacementHash $MockHashTable | Should Not Match "\/"
+        }
+        It "Should Not Contain Back Slash" {
+            ConvertTo-GraphiteMetric -MetricToClean "\\myServer\network interface(realtek pcie gbe family controller)\bytes received/sec" -MetricReplacementHash $MockHashTable | Should Not Match "\\"
+        }
+        It "Should Contain a Period" {
+            ConvertTo-GraphiteMetric -MetricToClean "\\myServer\network interface(realtek pcie gbe family controller)\bytes received/sec" -MetricReplacementHash $MockHashTable | Should Match "\."
+        }
+    }
     Context "Metric Transformation - Remove Underscores" {
         $TestMetric = ConvertTo-GraphiteMetric -MetricToClean "\\myServer\Processor(_Total)\% Processor Time" -RemoveUnderscores
 

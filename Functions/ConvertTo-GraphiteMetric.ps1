@@ -26,12 +26,6 @@ Function ConvertTo-GraphiteMetric
             Cleaning a Windows Performance Counter so its ready for Graphite.
 
     .Example
-        PS> ConvertTo-GraphiteMetric -MetricToClean "\\myServer\Processor(_Total)\% Processor Time" -RemoveUnderscores
-            myServer.Processor.Total.ProcessorTime
-
-            Cleaning a Windows Performance Counter so its ready for Graphite and removing underscores.
-
-    .Example
         PS> ConvertTo-GraphiteMetric -MetricToClean "\\myServer\Processor(_Total)\% Processor Time" -RemoveUnderscores -HostName myserver.production.net
             myserver.production.net.Processor.Total.ProcessorTime
 
@@ -55,7 +49,11 @@ Function ConvertTo-GraphiteMetric
         [switch]$NicePhysicalDisks,
 
         [parameter(Mandatory = $false)]
-        [string]$HostName=$env:COMPUTERNAME
+        [string]$HostName=$env:COMPUTERNAME,
+
+        # An [System.Collections.Specialized.OrderedDictionary] with Key being what to replace, and Value being what to replace it with.
+        [parameter(Mandatory = $false)]
+        [System.Collections.Specialized.OrderedDictionary]$MetricReplacementHash
     )
 
     # If HostName is being overwritten
@@ -64,41 +62,67 @@ Function ConvertTo-GraphiteMetric
         $MetricToClean = $MetricToClean -replace "\\\\$($env:COMPUTERNAME)\\","\\$($HostName)\"
     }
 
-    # Removing Beginning Backslashes"
-    $cleanNameOfSample = $MetricToClean -replace '^\\\\', ''
+    if ($MetricReplacementHash -ne $null)
+    {
+        $cleanNameOfSample = $MetricToClean
+        
+        ForEach ($m in $MetricReplacementHash.GetEnumerator())
+        {
+            If ($m.Value -cmatch '#{CAPTUREGROUP}')
+            {
+                # Stores the matching regex into $Matches
+                $cleanNameOfSample -match $m.Name | Out-Null
 
-    # Replacing Backslashes After ServerName With dot"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\\\\', '.'
+                # Replaces the string the user provided - this #{CAPTUREGROUP} to $Matches[1]
+                $replacementString = $m.Value -replace '#{CAPTUREGROUP}', $Matches[1]
 
-    # Removing Replacing Colon with Dot"
-    $cleanNameOfSample = $cleanNameOfSample -replace ':', '.'
+                $cleanNameOfSample = $cleanNameOfSample -replace $m.Name, $replacementString
+            }
+            else
+            {
+                Write-Verbose "Replacing: $($m.Name) With : $($m.Value)"
+                $cleanNameOfSample = $cleanNameOfSample -replace $m.Name, $m.Value
+            }
+        }
+    }
+    else
+    {
+        # Removing Beginning Backslashes"
+        $cleanNameOfSample = $MetricToClean -replace '^\\\\', ''
 
-    # Changing Fwd Slash To Dash"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\/', '-'
+        # Replacing Backslashes After ServerName With dot"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\\\\', '.'
 
-    # Changing BackSlash To Dot"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\\', '.'
+        # Removing Replacing Colon with Dot"
+        $cleanNameOfSample = $cleanNameOfSample -replace ':', '.'
 
-    # Changing Opening Round Bracket to Dot"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\(', '.'
+        # Changing Fwd Slash To Dash"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\/', '-'
 
-    # Removing Closing Round Bracket to Dot"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\)', ''
+        # Changing BackSlash To Dot"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\\', '.'
 
-    # Removing Square Bracket"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\]', ''
+        # Changing Opening Round Bracket to Dot"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\(', '.'
 
-    # Removing Square Bracket"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\[', ''
+        # Removing Closing Round Bracket to Dot"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\)', ''
 
-    # Removing Percentage Sign"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\%', ''
+        # Removing Square Bracket"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\]', ''
 
-    # Removing Spaces"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\s+', ''
+        # Removing Square Bracket"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\[', ''
 
-    # Removing Double Dots"
-    $cleanNameOfSample = $cleanNameOfSample -replace '\.\.', '.'
+        # Removing Percentage Sign"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\%', ''
+
+        # Removing Spaces"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\s+', ''
+
+        # Removing Double Dots"
+        $cleanNameOfSample = $cleanNameOfSample -replace '\.\.', '.'
+    }
 
     if ($RemoveUnderscores)
     {
