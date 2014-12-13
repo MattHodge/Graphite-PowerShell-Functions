@@ -140,7 +140,7 @@ Function Start-StatsToGraphite
                 if ([string]::IsNullOrWhiteSpace($Config.Filters) -or $sample.Path -notmatch [regex]$Config.Filters)
                 {
                     # Run the sample path through the ConvertTo-GraphiteMetric function
-                    $cleanNameOfSample = ConvertTo-GraphiteMetric -MetricToClean $sample.Path -RemoveUnderscores -NicePhysicalDisks -HostName $Config.NodeHostName
+                    $cleanNameOfSample = ConvertTo-GraphiteMetric -MetricToClean $sample.Path  -HostName $Config.NodeHostName -MetricReplacementHash $Config.MetricReplace
 
                     # Build the full metric path
                     $metricPath = $Config.MetricPath + '.' + $cleanNameOfSample
