@@ -17,6 +17,7 @@ More details at [http://www.hodgkins.net.au/mswindows/using-powershell-to-send-m
 * Additional functions are exposed that allow you to send data to Graphite from PowerShell easily. [Here](#functions) is the list of included functions
 * Script can be installed to run as a service
 * Installable by Chef Cookbook [which is available here](https://github.com/tas50/chef-graphite_powershell_functions/)
+* Installable by Puppet [which is available here](https://forge.puppetlabs.com/opentable/graphite_powershell)
 * Supports Hosted Graphite (https://www.hostedgraphite.com)
 
 ## Installation
