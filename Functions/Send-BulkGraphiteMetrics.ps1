@@ -72,7 +72,7 @@ function Send-BulkGraphiteMetrics
         $utcDate = $DateTime.ToUniversalTime()
         
         # Convert to a Unix time without any rounding
-        [uint64]$UnixTime = (Get-Date -Date $utcDate -UFormat %s)
+        [uint64]$UnixTime = [double]::Parse((Get-Date -Date $utcDate -UFormat %s))
     }
 
     # Create Send-To-Graphite Metric
