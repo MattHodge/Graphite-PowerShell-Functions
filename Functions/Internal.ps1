@@ -99,25 +99,33 @@ Function Import-XMLConfig
         $Config.Filters = $null
     }
 
-    # Below is for SQL Metrics
-    $Config.MSSQLMetricPath = $xmlfile.Configuration.MSSQLMetics.MetricPath
-    [int]$Config.MSSQLMetricSendIntervalSeconds = $xmlfile.Configuration.MSSQLMetics.MetricSendIntervalSeconds
-    $Config.MSSQLMetricTimeSpan = [timespan]::FromSeconds($Config.MSSQLMetricSendIntervalSeconds)
-    [int]$Config.MSSQLConnectTimeout = $xmlfile.Configuration.MSSQLMetics.SQLConnectionTimeoutSeconds
-    [int]$Config.MSSQLQueryTimeout = $xmlfile.Configuration.MSSQLMetics.SQLQueryTimeoutSeconds
-
-    # Create the Performance Counters Array
-    $Config.MSSQLServers = @()
-
-    foreach ($sqlServer in $xmlfile.Configuration.MSSQLMetics.SQLServers.SQLServer)
+    # Doesn't throw errors if users decide to delete the SQL section from the XML file. Issue #32.
+    try
     {
-        # Load each SQL Server into an array
-        $Config.MSSQLServers += [pscustomobject]@{
-            ServerInstance = $sqlServer.ServerInstance;
-            Username = $sqlServer.Username;
-            Password = $sqlServer.Password;
-            Queries = $sqlServer.Query
+        # Below is for SQL Metrics
+        $Config.MSSQLMetricPath = $xmlfile.Configuration.MSSQLMetics.MetricPath
+        [int]$Config.MSSQLMetricSendIntervalSeconds = $xmlfile.Configuration.MSSQLMetics.MetricSendIntervalSeconds
+        $Config.MSSQLMetricTimeSpan = [timespan]::FromSeconds($Config.MSSQLMetricSendIntervalSeconds)
+        [int]$Config.MSSQLConnectTimeout = $xmlfile.Configuration.MSSQLMetics.SQLConnectionTimeoutSeconds
+        [int]$Config.MSSQLQueryTimeout = $xmlfile.Configuration.MSSQLMetics.SQLQueryTimeoutSeconds
+
+        # Create the Performance Counters Array
+        $Config.MSSQLServers = @()     
+     
+        foreach ($sqlServer in $xmlfile.Configuration.MSSQLMetics)
+        {
+            # Load each SQL Server into an array
+            $Config.MSSQLServers += [pscustomobject]@{
+                ServerInstance = $sqlServer.ServerInstance;
+                Username = $sqlServer.Username;
+                Password = $sqlServer.Password;
+                Queries = $sqlServer.Query
+            }
         }
+    }
+    catch
+    {
+        Write-Verbose "SQL configuration has been left out, skipping."
     }
 
     Return $Config
