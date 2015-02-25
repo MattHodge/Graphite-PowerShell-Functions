@@ -129,8 +129,7 @@ Function Start-StatsToGraphite
             {
                 if ($Config.ShowOutput)
                 {
-                    $samplePath = $sample.Path
-                    Write-Verbose "Sample Name: $samplePath"
+                    Write-Verbose "Sample Name: $($sample.Path)"
                 }
 
                 # Create Stopwatch for Filter Time Period
@@ -149,7 +148,7 @@ Function Start-StatsToGraphite
                 }
                 else
                 {
-                    Write-Verbose "Filtering out Sample Name: $($samplePath) as it matches something in the filters."
+                    Write-Verbose "Filtering out Sample Name: $($sample.Path) as it matches something in the filters."
                 }
 
                 $filterStopWatch.Stop()
