@@ -102,5 +102,11 @@ Describe "ConvertTo-GraphiteMetric" {
         It "Should Return my.new.hostname.physicaldisk.e-drive.diskwritequeuelength as Output" {
             $TestMetric | Should MatchExactly "my.new.hostname.physicaldisk.e-drive.diskwritequeuelength"
         }
+
+        $TestMetric = ConvertTo-GraphiteMetric -MetricToClean "\\$($env:COMPUTERNAME)\physicaldisk(1 e:)\avg. disk write queue length" -RemoveUnderscores -NicePhysicalDisks -HostName "host_with_underscores"
+
+        It "Should Return host_with_underscores.physicaldisk.e-drive.diskwritequeuelength as Output when RemoveUnderscores is enabled and host has underscores" {
+            $TestMetric | Should MatchExactly "host_with_underscores.physicaldisk.e-drive.diskwritequeuelength"
+        }
     }
 }

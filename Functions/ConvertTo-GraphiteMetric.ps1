@@ -59,7 +59,11 @@ Function ConvertTo-GraphiteMetric
     # If HostName is being overwritten
     if ($HostName -ne $env:COMPUTERNAME)
     {
-        $MetricToClean = $MetricToClean -replace "\\\\$($env:COMPUTERNAME)\\","\\$($HostName)\"
+        # Generate a GUID for the host name which we will then replace later. This needs to be done so the regex rules applied to the metric do not mess with the hostname the user requests. (Issue #37).
+        $hostGuid = ([guid]::NewGuid()).ToString().Replace('-','')
+
+        # Set the host name to the hostGuid
+        $MetricToClean = $MetricToClean -replace "\\\\$($env:COMPUTERNAME)\\","\\$($hostGuid)\"
     }
 
     if ($MetricReplacementHash -ne $null)
@@ -145,6 +149,13 @@ Function ConvertTo-GraphiteMetric
 
         # Remvoe the .avg. section
         $cleanNameOfSample = $cleanNameOfSample -replace 'physicaldisk\.(.*)\.avg\.', ('physicaldisk.' + $niceDriveLetter + '.')
+    }
+
+    # If $hostGuid has been generated, replace the guid inside the metrics with the correct HostName
+    if ($hostGuid)
+    {
+        Write-Verbose "Replacing hostGuid '$($hostGuid)' with requested Hostname '$($HostName)'"
+        $cleanNameOfSample = $cleanNameOfSample -replace $hostGuid,$HostName
     }
 
     Write-Output $cleanNameOfSample
