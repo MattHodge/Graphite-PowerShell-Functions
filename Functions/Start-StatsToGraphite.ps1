@@ -126,10 +126,12 @@ Function Start-StatsToGraphite
 
             # Loop Through All The Counters
             foreach ($sample in $samples)
-            {
+            { 
+                
+                $samplePath = $sample.Path
+                
                 if ($Config.ShowOutput)
                 {
-                    $samplePath = $sample.Path
                     Write-Verbose "Sample Name: $samplePath"
                 }
 
