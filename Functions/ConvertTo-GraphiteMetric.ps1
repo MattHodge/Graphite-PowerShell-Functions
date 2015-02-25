@@ -56,6 +56,9 @@ Function ConvertTo-GraphiteMetric
         [System.Collections.Specialized.OrderedDictionary]$MetricReplacementHash
     )
 
+    # Setup booleen for if we are changing hostname
+    $renameHost = $false
+
     # If HostName is being overwritten
     if ($HostName -ne $env:COMPUTERNAME)
     {
@@ -64,6 +67,9 @@ Function ConvertTo-GraphiteMetric
 
         # Set the host name to the hostGuid
         $MetricToClean = $MetricToClean -replace "\\\\$($env:COMPUTERNAME)\\","\\$($hostGuid)\"
+
+        $renameHost = $true
+        
     }
 
     if ($MetricReplacementHash -ne $null)
@@ -152,11 +158,12 @@ Function ConvertTo-GraphiteMetric
     }
 
     # If $hostGuid has been generated, replace the guid inside the metrics with the correct HostName
-    if ($hostGuid)
+    if ($renameHost)
     {
         Write-Verbose "Replacing hostGuid '$($hostGuid)' with requested Hostname '$($HostName)'"
         $cleanNameOfSample = $cleanNameOfSample -replace $hostGuid,$HostName
     }
+
 
     Write-Output $cleanNameOfSample
 }
