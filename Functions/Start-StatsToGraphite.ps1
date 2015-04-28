@@ -70,7 +70,7 @@ Function Start-StatsToGraphite
         if ($Config.MSSQLServers.Length -gt 0)
         {
             # Check for SQLPS Module
-            if (($listofSQLModules = Get-Module -List SQLPS).Length -eq 1)
+            if (($listofSQLModules = Get-Module -List SQLPS).Length -gt 0)
             {
                 # Load The SQL Module
                 Import-Module SQLPS -DisableNameChecking
@@ -159,6 +159,7 @@ Function Start-StatsToGraphite
         }# end if ExcludePerfCounters
 
         if($SqlMetrics) {
+
             # Loop through each SQL Server
             foreach ($sqlServer in $Config.MSSQLServers)
             {
@@ -173,7 +174,7 @@ Function Start-StatsToGraphite
                         'Database' = $query.Database;
                         'Query' = $query.TSQL;
                         'ConnectionTimeout' = $Config.MSSQLConnectTimeout;
-                        'QueryTimeout' = $Config.MSSQLQueryTimeout
+                        'QueryTimeout' = $Config.MSSQLQueryTimeout;
                     }
 
                     # Run the Invoke-SqlCmd Cmdlet with a username and password only if they are present in the config file
@@ -188,12 +189,30 @@ Function Start-StatsToGraphite
                     try
                     {
                         $commandMeasurement = Measure-Command -Expression {
-                            $sqlresult = Invoke-SQLCmd @sqlCmdParams
+                            $sqlresults = Invoke-SQLCmd @sqlCmdParams
 
-                            # Build the MetricPath that will be used to send the metric to Graphite
-                            $metricPath = $Config.MSSQLMetricPath + '.' + $query.MetricName
+                            # Build the MetricPath that will be used to send the single metric to Graphite
+							if ($query.MetricType -eq "SingleRow")
+							{
+								$metricPath = $Config.MSSQLMetricPath + '.' + $query.MetricName
+								$metricsToSend[$metricPath] = $sqlresults[0]
+							}
+                            # Build the MetricPath that will be used to send the multiRow metric to Graphite
+							elseif ($query.MetricType -eq "MultiRow")
+							{
+								foreach ($sqlresult in $sqlresults)
+								{
+									# Build the MetricPath that will be used to send the metric to Graphite
+									$metricPath = $Config.MSSQLMetricPath + '.' + $sqlresult[0]
+									$metricsToSend[$metricPath] = $sqlresult[1]
+								}
+							}
+                            # No valid MetricType selected, aborting collection
+							else
+							{
+								throw "No valid MetricType was selected, aborting script."
+							}
 
-                            $metricsToSend[$metricPath] = $sqlresult[0]
                         }
 
                         Write-Verbose ('SQL Metric Collection Execution Time: ' + $commandMeasurement.TotalSeconds + ' seconds')
@@ -228,7 +247,13 @@ Function Start-StatsToGraphite
 
         $iterationStopWatch.Stop()
         $collectionTime = $iterationStopWatch.Elapsed
-        $sleep = $Config.MetricTimeSpan.TotalMilliseconds - $collectionTime.TotalMilliseconds
+        
+        
+        $sleep = $Config.MetricTimeSpan.TotalMilliseconds
+        
+        # Set SQL Metric collection interval, if SqlMetrics is true
+        if ($SqlMetrics) { $sleep = $Config.MSSQLMetricTimeSpan.TotalMilliseconds - $collectionTime.TotalMilliseconds } 
+        
         if ($Config.ShowOutput)
         {
             # Write To Console How Long Execution Took
