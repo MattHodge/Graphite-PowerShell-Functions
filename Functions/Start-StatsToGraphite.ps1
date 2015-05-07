@@ -142,7 +142,11 @@ Function Start-StatsToGraphite
                     $cleanNameOfSample = ConvertTo-GraphiteMetric -MetricToClean $sample.Path -HostName $Config.NodeHostName -MetricReplacementHash $Config.MetricReplace
 
                     # Build the full metric path
-                    $metricPath = $Config.MetricPath + '.' + $cleanNameOfSample
+                    if (-not [string]::IsNullOrWhiteSpace($Config.MetricPath)) {
+                        $metricPath = $Config.MetricPath + '.' + $cleanNameOfSample
+                    } else {
+                        $metricPath = $cleanNameOfSample
+                    }
 
                     $metricsToSend[$metricPath] = $sample.Cookedvalue
                 }
