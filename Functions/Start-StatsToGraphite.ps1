@@ -18,6 +18,9 @@ Function Start-StatsToGraphite
 
     .Parameter SqlMetrics
         Includes SQL Metrics defined in XML config
+        
+    .Parameter ConfigXMLPath
+        Uses this configuration file instead of the one inside the module folder
 
     .Example
         PS> Start-StatsToGraphite
@@ -51,8 +54,18 @@ Function Start-StatsToGraphite
         [Parameter(Mandatory = $false)]
         [switch]$TestMode,
         [switch]$ExcludePerfCounters = $false,
-        [switch]$SqlMetrics = $false
+        [switch]$SqlMetrics = $false,
+        [string]$ConfigXMLPath
     )
+
+    # Override the config path set in the module if one is provided explicitly
+    if (-not [string]::IsNullOrWhiteSpace($ConfigXMLPath)) {
+        $configPath = $ConfigXMLPath
+    }
+
+    if (-not (Test-Path -PathType Leaf -LiteralPath $configPath)){
+        throw "Cannot find configuration file - $configPath"
+    }
 
     # Run The Load XML Config Function
     $Config = Import-XMLConfig -ConfigPath $configPath
