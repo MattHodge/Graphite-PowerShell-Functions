@@ -179,9 +179,11 @@ function SendMetrics
                     $enc = new-object system.text.asciiencoding
                     foreach ($metricString in $Metrics)
                     {
-                        $Message += "$($metricString)`r"
+                        $Message += "$($metricString)`n"
                     }
                     $byte = $enc.GetBytes($Message)
+
+                    Write-Verbose "Byte Length: $($byte.Length)"
                     $Sent = $udpobject.Send($byte,$byte.Length)
                 }
 
