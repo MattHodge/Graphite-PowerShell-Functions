@@ -110,7 +110,7 @@ InModuleScope Graphite-PowerShell {
 
     Describe "Import-XMLConfig" {
         Context "Loading a Configuration File" {
-            $_config = Import-XMLConfig -ConfigPath "./StatsToGraphiteConfig.xml"
+            $_config = Import-XMLConfig -ConfigPath "$(Get-Location)\StatsToGraphiteConfig.xml"
 
             It "Loaded Configuration File Should Not Be Empty" {
                 $_config | Should Not BeNullOrEmpty
