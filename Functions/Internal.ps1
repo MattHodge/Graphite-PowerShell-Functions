@@ -56,7 +56,7 @@ Function Import-XMLConfig
 
     # What is the metric path
 
-    $Config.MetricPath = $xmlfile.Configuration.Graphite.MetricPath
+    $Config.MetricPrefix = $xmlfile.Configuration.Graphite.MetricPrefix
 
     # Convert Value in Configuration File to Bool for showing Verbose Output
     [bool]$Config.ShowOutput = [System.Convert]::ToBoolean($xmlfile.Configuration.Logging.VerboseOutput)
@@ -103,7 +103,7 @@ Function Import-XMLConfig
     try
     {
         # Below is for SQL Metrics
-        $Config.MSSQLMetricPath = $xmlfile.Configuration.MSSQLMetics.MetricPath
+        $Config.MSSQLMetricPrefix = $xmlfile.Configuration.MSSQLMetics.MetricPrefix
         [int]$Config.MSSQLMetricSendIntervalSeconds = $xmlfile.Configuration.MSSQLMetics.MetricSendIntervalSeconds
         $Config.MSSQLMetricTimeSpan = [timespan]::FromSeconds($Config.MSSQLMetricSendIntervalSeconds)
         [int]$Config.MSSQLConnectTimeout = $xmlfile.Configuration.MSSQLMetics.SQLConnectionTimeoutSeconds

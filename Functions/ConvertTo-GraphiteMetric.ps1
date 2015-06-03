@@ -1,35 +1,36 @@
-Function ConvertTo-GraphiteMetric
+﻿Function ConvertTo-GraphiteMetric
 {
 <#
     .Synopsis
-        Converts Windows PerfMon metrics into a metric name that is suitable for Graphite.
+        Converts an InputObject into metrics name that is suitable for sending to Graphite server via Carbon.
 
     .Description
-        Converts Windows PerfMon metrics into a metric name that is suitable for a Graphite metric path.
+        Send an Object or an Array of Objects with 3 Properties:
+            - TimeStamp
+            - Name
+            - Value
 
-    .Parameter MetricToClean
-        The metric to be cleaned.
+        This Cmd-Let will convert this to a format which can be sent to a Graphite server via Carbon.
 
-    .Parameter RemoveUnderscores
-        Removes Underscores from the metric name
+    .Parameter InputObject
+        Array of Objects with 3 Properties: "TimeStamp", "Name", "Value"
 
-    .Parameter NicePhysicalDisks
-        Makes the physical disk perf counters prettier
-
-    .Parameter HostName
-        Allows you to override the hostname of the metrics before sending. Default is not to override and use what the Windows Performance Counters provide.
-
-    .Example
-        PS> ConvertTo-GraphiteMetric -MetricToClean "\\myServer\network interface(realtek pcie gbe family controller)\bytes received/sec"
-            myServer.networkinterface.realtekpciegbefamilycontroller.bytesreceived-sec
-
-            Cleaning a Windows Performance Counter so its ready for Graphite.
+    .Parameter MetricPrefix
+        A Metric Prefix to attach to the front of the metrics.
 
     .Example
-        PS> ConvertTo-GraphiteMetric -MetricToClean "\\myServer\Processor(_Total)\% Processor Time" -RemoveUnderscores -HostName myserver.production.net
-            myserver.production.net.Processor.Total.ProcessorTime
+        Get-Counter -Counter '\memory\available mbytes' -SampleInterval 1 -MaxSamples 1 | Format-PerformanceCounter | ConvertTo-GraphiteMetric -MetricReplacementHash $config.MetricReplace
 
-            Cleaning a Windows Performance Counter so its ready for Graphite and removing underscores. Replacing HostName with custom name.
+        myhostname.mem.availablembytes 4545 1433299042
+
+        Cleaning a Windows Performance Counter so its ready for Graphite.
+
+    .Example
+        Get-Counter -Counter '\memory\available mbytes' -SampleInterval 1 -MaxSamples 1 | Format-PerformanceCounter | ConvertTo-GraphiteMetric -MetricReplacementHash $config.MetricReplace -MetricPrefix datacenter1.servers
+
+        datacenter1.servers.myhostname.mem.availablembytes 4545 1433299042
+
+        Cleaning a Windows Performance Counter so its ready for Graphite, and adding a MetricPrefix
 
     .Notes
         NAME:      ConvertTo-GraphiteMetric
@@ -39,131 +40,55 @@ Function ConvertTo-GraphiteMetric
     param
     (
         [CmdletBinding()]
-        [parameter(Mandatory = $true)]
-        [string]$MetricToClean,
+        [Parameter(Mandatory=$true, 
+                   ValueFromPipeline=$true,
+                   ValueFromPipelineByPropertyName=$true, 
+                   ValueFromRemainingArguments=$false, 
+                   Position=0)]
+        $InputObject,
 
-        [parameter(Mandatory = $false)]
-        [switch]$RemoveUnderscores,
-
-        [parameter(Mandatory = $false)]
-        [switch]$NicePhysicalDisks,
-
-        [parameter(Mandatory = $false)]
-        [string]$HostName=$env:COMPUTERNAME,
+        # Prefix to attach to the front of the metrics
+        [Parameter(Mandatory=$false)]
+        $MetricPrefix,
 
         # An [System.Collections.Specialized.OrderedDictionary] with Key being what to replace, and Value being what to replace it with.
-        [parameter(Mandatory = $false)]
+        [parameter(Mandatory = $true)]
         [System.Collections.Specialized.OrderedDictionary]$MetricReplacementHash
     )
 
-    # Setup booleen for if we are changing hostname
-    $renameHost = $false
 
-    # If HostName is being overwritten
-    if ($HostName -ne $env:COMPUTERNAME)
+    Begin
     {
-        # Generate a GUID for the host name which we will then replace later. This needs to be done so the regex rules applied to the metric do not mess with the hostname the user requests. (Issue #37).
-        $hostGuid = ([guid]::NewGuid()).ToString().Replace('-','')
-
-        # Set the host name to the hostGuid
-        $MetricToClean = $MetricToClean -replace "\\\\$($env:COMPUTERNAME)\\","\\$($hostGuid)\"
-
-        $renameHost = $true
-        
     }
-
-    if ($MetricReplacementHash -ne $null)
+    Process
     {
-        $cleanNameOfSample = $MetricToClean
-        
-        ForEach ($m in $MetricReplacementHash.GetEnumerator())
+        ForEach ($i in $InputObject)
         {
-            If ($m.Value -cmatch '#{CAPTUREGROUP}')
-            {
-                # Stores the matching regex into $Matches
-                $cleanNameOfSample -match $m.Name | Out-Null
+            $fullMetricToReturn = $null
 
-                # Replaces the string the user provided - this #{CAPTUREGROUP} to $Matches[1]
-                $replacementString = $m.Value -replace '#{CAPTUREGROUP}', $Matches[1]
-
-                $cleanNameOfSample = $cleanNameOfSample -replace $m.Name, $replacementString
-            }
-            else
+            # If MetricPrefix is being used
+            if ($MetricPrefix)
             {
-                Write-Verbose "Replacing: $($m.Name) With : $($m.Value)"
-                $cleanNameOfSample = $cleanNameOfSample -replace $m.Name, $m.Value
+                $fullMetricToReturn += "$MetricPrefix."
             }
+            
+            # Convert the Name of the metic
+            $metricName = $i.Name | ConvertTo-GraphiteMetricName -MetricReplacementHash $MetricReplacementHash
+
+            $fullMetricToReturn += "$metricName "
+
+            # Attach the Value of the Metric
+            $fullMetricToReturn += "$($i.Value) "
+
+            # Attach the UnixTime to the Metric
+            $unixTime = $i.TimeStamp | ConvertTo-UTCUnixTime
+            $fullMetricToReturn += $unixTime
+
+            # Return the completed metric
+            Write-Output $fullMetricToReturn
         }
     }
-    else
+    End
     {
-        # Removing Beginning Backslashes"
-        $cleanNameOfSample = $MetricToClean -replace '^\\\\', ''
-
-        # Replacing Backslashes After ServerName With dot"
-        $cleanNameOfSample = $cleanNameOfSample -replace '\\\\', '.'
-
-        # Removing Replacing Colon with Dot"
-        $cleanNameOfSample = $cleanNameOfSample -replace ':', '.'
-
-        # Changing Fwd Slash To Dash"
-        $cleanNameOfSample = $cleanNameOfSample -replace '\/', '-'
-
-        # Changing BackSlash To Dot"
-        $cleanNameOfSample = $cleanNameOfSample -replace '\\', '.'
-
-        # Changing Opening Round Bracket to Dot"
-        $cleanNameOfSample = $cleanNameOfSample -replace '\(', '.'
-
-        # Removing Closing Round Bracket to Dot"
-        $cleanNameOfSample = $cleanNameOfSample -replace '\)', ''
-
-        # Removing Square Bracket"
-        $cleanNameOfSample = $cleanNameOfSample -replace '\]', ''
-
-        # Removing Square Bracket"
-        $cleanNameOfSample = $cleanNameOfSample -replace '\[', ''
-
-        # Removing Percentage Sign"
-        $cleanNameOfSample = $cleanNameOfSample -replace '\%', ''
-
-        # Removing Spaces"
-        $cleanNameOfSample = $cleanNameOfSample -replace '\s+', ''
-
-        # Removing Double Dots"
-        $cleanNameOfSample = $cleanNameOfSample -replace '\.\.', '.'
     }
-
-    if ($RemoveUnderscores)
-    {
-        Write-Verbose "Removing Underscores as the switch is enabled"
-        $cleanNameOfSample = $cleanNameOfSample -replace '_', ''
-    }
-
-    if ($NicePhysicalDisks)
-    {
-        Write-Verbose "NicePhyiscalDisks switch is enabled"
-
-        # Get Drive Letter
-        $driveLetter = ([regex]'physicaldisk\.\d([a-zA-Z])').match($cleanNameOfSample).groups[1].value
-
-        # Add -drive to the drive letter
-        $cleanNameOfSample = $cleanNameOfSample -replace 'physicaldisk\.\d([a-zA-Z])', ('physicaldisk.' + $driveLetter + '-drive')
-
-        # Get the new cleaned drive letter
-        $niceDriveLetter = ([regex]'physicaldisk\.(.*)\.avg\.').match($cleanNameOfSample).groups[1].value
-
-        # Remvoe the .avg. section
-        $cleanNameOfSample = $cleanNameOfSample -replace 'physicaldisk\.(.*)\.avg\.', ('physicaldisk.' + $niceDriveLetter + '.')
-    }
-
-    # If $hostGuid has been generated, replace the guid inside the metrics with the correct HostName
-    if ($renameHost)
-    {
-        Write-Verbose "Replacing hostGuid '$($hostGuid)' with requested Hostname '$($HostName)'"
-        $cleanNameOfSample = $cleanNameOfSample -replace $hostGuid,$HostName
-    }
-
-
-    Write-Output $cleanNameOfSample
 }

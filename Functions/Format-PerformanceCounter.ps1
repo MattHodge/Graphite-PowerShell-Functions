@@ -15,15 +15,45 @@ function Format-PerformanceCounter
     Param
     (
         # A Microsoft.PowerShell.Commands.GetCounter.PerformanceCounterSampleSet object to format.
-        [Parameter(Mandatory=$true, 
-                   ValueFromPipeline=$true,
-                   ValueFromPipelineByPropertyName=$true, 
-                   ValueFromRemainingArguments=$false, 
-                   Position=0)]
+        [Parameter(
+            Position=0, 
+            Mandatory=$true, 
+            ValueFromPipeline=$true,
+            ValueFromPipelineByPropertyName=$true)
+        ]
         [ValidateNotNull()]
         [ValidateNotNullOrEmpty()]
-        [Microsoft.PowerShell.Commands.GetCounter.PerformanceCounterSampleSet]$InputObject
+        [Microsoft.PowerShell.Commands.GetCounter.PerformanceCounterSampleSet[]]$InputObject
     )
 
-        return ($InputObject.CounterSamples | Select-Object @{Name="TimeStamp";Expression={$_."Timestamp"}},@{Name="Name";Expression={$_."Path"}},@{Name="Value";Expression={$_."CookedValue"}})
+
+    Begin
+    {
+        $returnArray = @()
+    }
+    Process
+    {
+        ForEach ($c in $InputObject)
+        {   
+            Write-Verbose "Doing Counters For Time: $($counter.Timestamp)" 
+            ForEach ($counterSample in $c.CounterSamples)
+            {
+            
+                $metricObject = New-Object PSObject -Property @{            
+                    TimeStamp = $c.Timestamp  
+                    Name = $counterSample.Path         
+                    Value = $counterSample.CookedValue                   
+                }
+
+                $returnArray += $metricObject
+
+            }
+
+
+        }
+    }
+    End
+    {
+        return $returnArray
+    }
 }

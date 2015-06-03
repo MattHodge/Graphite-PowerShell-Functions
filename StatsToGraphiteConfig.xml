@@ -3,7 +3,7 @@
 	<Graphite>
 		<CarbonServer>yourCarbonServerNameOrIP</CarbonServer>
 		<CarbonServerPort>2003</CarbonServerPort>
-		<MetricPath>datacenter1.servers</MetricPath>
+		<MetricPrefix>datacenter1.servers</MetricPrefix>
 		<NodeHostName>$env:COMPUTERNAME</NodeHostName>
 		<MetricSendIntervalSeconds>5</MetricSendIntervalSeconds>
 		<SendUsingUDP>False</SendUsingUDP>
@@ -25,6 +25,8 @@
 		<Counter Name="\PhysicalDisk(*)\Avg. Disk Read Queue Length"/>
 	</PerformanceCounters>
 	<MetricCleaning>
+		<!-- Uncomment the next line of you want to override the node host name -->
+		<!-- <MetricReplace This="$env:COMPUTERNAME" With="CustomHostName" /> -->
 		<!-- These will be found and replaced in the order they appear here -->
 		<MetricReplace This="physicaldisk\(.* (.*)\:\)" With="physicaldisk.#{CAPTUREGROUP}-drive"/>
 		<MetricReplace This="^\\\\" With=""/>
@@ -54,7 +56,7 @@
 		<MetricFilter Name="teredo tunneling"/>
 	</Filtering>
 	<MSSQLMetics>
-		<MetricPath>datacenter1.sqlmetrics</MetricPath>
+		<MetricPrefix>datacenter1.sqlmetrics</MetricPrefix>
 		<MetricSendIntervalSeconds>60</MetricSendIntervalSeconds>
 		<SQLConnectionTimeoutSeconds>5</SQLConnectionTimeoutSeconds>
 		<SQLQueryTimeoutSeconds>5</SQLQueryTimeoutSeconds>
