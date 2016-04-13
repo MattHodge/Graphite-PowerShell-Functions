@@ -15,7 +15,7 @@
 		<Counter Name="\Network Interface(*)\Packets Sent Unicast/sec"/>
 		<Counter Name="\Network Interface(*)\Packets Received Non-Unicast/sec"/>
 		<Counter Name="\Network Interface(*)\Packets Sent Non-Unicast/sec"/>
-    <Counter Name="\Process(_Total)\Working Set"/>
+		<Counter Name="\Process(_Total)\Working Set"/>
 		<Counter Name="\Processor(_Total)\% Processor Time"/>
 		<Counter Name="\Memory\Available MBytes"/>
 		<Counter Name="\Memory\Pages/sec"/>
@@ -53,9 +53,9 @@
 		<MetricReplace This="\.intel[a-zA-Z0-9]+\." With=".intel."/>
 		<MetricReplace This="\.realtek[a-zA-Z0-9]+\." With=".realtek."/>
 		<MetricReplace This="\.memory\." With=".mem."/>
-    	<MetricReplace This="\.process\.total\.workingset" With=".mem.used"/>
-    	<MetricReplace This="\.logicaldisk\.total\.diskreads-sec" With=".disk.operations.read"/>
-   	 	<MetricReplace This="\.logicaldisk\.total\.diskwrites-sec" With=".disk.operations.write"/>
+		<MetricReplace This="\.process\.total\.workingset" With=".mem.used"/>
+		<MetricReplace This="\.logicaldisk\.total\.diskreads-sec" With=".disk.operations.read"/>
+		<MetricReplace This="\.logicaldisk\.total\.diskwrites-sec" With=".disk.operations.write"/>
 		<MetricReplace This="\.logicaldisk\.total\.diskreadbytes-sec" With=".disk.throughput.read"/>
 		<MetricReplace This="\.logicaldisk\.total\.diskwritebytes-sec" With=".disk.throughput.write"/>  
 	</MetricCleaning>
