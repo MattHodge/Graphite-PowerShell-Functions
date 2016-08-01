@@ -138,6 +138,9 @@ Function Start-StatsToGraphite
                 # Check if there are filters or not
                 if ([string]::IsNullOrWhiteSpace($Config.Filters) -or $sample.Path -notmatch [regex]$Config.Filters)
                 {
+                    # Remove "dot" from the original sample path
+                    $sample.path = $sample.path.replace(".","-")
+                    
                     # Run the sample path through the ConvertTo-GraphiteMetric function
                     $cleanNameOfSample = ConvertTo-GraphiteMetric -MetricToClean $sample.Path -HostName $Config.NodeHostName -MetricReplacementHash $Config.MetricReplace
 
