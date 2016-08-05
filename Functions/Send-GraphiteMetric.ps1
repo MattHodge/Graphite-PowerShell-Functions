@@ -76,8 +76,10 @@ function Send-GraphiteMetric
     # If Received A DateTime Object - Convert To UnixTime
     if ($DateTime)
     {
+        $utcDate = $DateTime.ToUniversalTime()
+
         # Convert to a Unix time without any rounding
-        $UnixTime = [uint64]$DateTime.ToUniversalTime()
+        [uint64]$UnixTime = [double]::Parse((Get-Date -Date $utcDate -UFormat %s))
     }
 
     # Create Send-To-Graphite Metric
