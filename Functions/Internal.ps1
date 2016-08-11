@@ -45,6 +45,13 @@ Function Import-XMLConfig
         $Config.NodeHostName = $env:COMPUTERNAME
     }
 
+    # Set the NodeHostName to AWS Instance ID
+    if($Config.NodeHostName -eq 'AWSINSTANCEID')
+    {
+        $instanceID = Invoke-WebRequest -Uri http://169.254.169.254/latest/meta-data/instance-id -UseBasicParsing
+        $Config.NodeHostName = $instanceID.Content
+    }
+
     # Get Metric Send Interval From Config
     [int]$Config.MetricSendIntervalSeconds = $xmlfile.Configuration.Graphite.MetricSendIntervalSeconds
 
