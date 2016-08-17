@@ -61,14 +61,17 @@
 		<SQLServers>
 			<!-- A SQL Server Connection Using SQL Authentication -->
 			<SQLServer ServerInstance="(localdb)\v11.0" Username="sa" Password="PASSWORD1!">
-				<Query Database="mydb" MetricName="mydb.userlist.rowcount" TSQL="select count(userListID) From [dbo].[userList]"/>
-				<Query Database="mydb" MetricName="mydb.userlist.ukemails" TSQL="select count(userListID) From [dbo].[userList] Where Emails like '%.uk%'"/>
+				<Query Database="mydb" MetricType="SingleRow" MetricName="mydb.userlist.rowcount" TSQL="select count(userListID) From [dbo].[userList]"/>
+				<!-- An example of a MultiRow resultset... column 1 will be part of the graphite metric label. Column 2 is the metric value -->
+                <Query Database="master" MetricType="MultiRow"  MetricName="" TSQL="SELECT DB_NAME(dbid) AS DatabaseName, COUNT(*) AS Connections FROM sys.sysprocesses GROUP BY dbid"/>
 			</SQLServer>
 			<!-- A SQL Server Connection Using Windows Authentication. The credentials from the running PowerShell session will be used. -->
 			<SQLServer ServerInstance="MSSQLServer" Username="" Password="">
 				<Query Database="citydb" MetricName="citydb.cities.navadwipkota" TSQL="Select COUNT (city) from [dbo].[cities] Where City = 'Navadwip' OR City = 'Kota'"/>
 				<!-- An example query SQL query using a greater-than symbol. The symbol must be replaced with an XML Entity References. List here - http://msdn.microsoft.com/en-us/library/windows/desktop/dd892769%28v=vs.85%29.aspx -->
 				<Query Database="addressbook" MetricName="people.ages.over30" TSQL="Select COUNT (personid) from [dbo].[tblAddressBook] Where Age &gt; 30"/>
+                <!-- An example of a MultiRow resultset... column 1 will be part of the graphite metric label. Column 2 is the metric value -->
+                <Query Database="master" MetricType="MultiRow"  MetricName="" TSQL="SELECT DB_NAME(dbid) AS DatabaseName, COUNT(*) AS Connections FROM sys.sysprocesses GROUP BY dbid"/>
 			</SQLServer>
 		</SQLServers>
 	</MSSQLMetics>
