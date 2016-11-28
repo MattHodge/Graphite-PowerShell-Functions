@@ -117,6 +117,7 @@ Function Start-StatsToGraphite
         {
             # Take the Sample of the Counter
             $collections = Get-Counter -Counter $Config.Counters -SampleInterval 1 -MaxSamples 1
+            $serviceCollections = Get-Service -Name $Config.Services 
 
             # Filter the Output of the Counters
             $samples = $collections.CounterSamples
@@ -156,6 +157,36 @@ Function Start-StatsToGraphite
                 Write-Verbose "Job Execution Time To Get to Clean Metrics: $($filterStopWatch.Elapsed.TotalSeconds) seconds."
 
             }# End for each sample loop
+
+            foreach($service in $serviceCollections)
+            {
+                if($Config.ShowOutput)
+                {
+                    Write-Verbose "Service Name: $($service.Name)"
+                }
+
+                # Create Stopwatch for Filter Time Period
+                $filterStopWatch = [System.Diagnostics.Stopwatch]::StartNew()
+                
+                
+                $cleanNameOfService = [string]::Format("{0}.service.{1}",$Config.NodeHostName,$service.Name)
+
+                # Build the full metric path
+                $metricPath = $Config.MetricPath + '.' + $cleanNameOfService
+
+                if($service.status -eq "running")
+                {
+                    $metricsToSend[$metricPath] = 1
+                }
+                else
+                {
+                    $metricsToSend[$metricPath] = 0
+                }
+
+                $filterStopWatch.Stop()
+
+                Write-Verbose "Job Execution Time To Get to Clean Metrics: $($filterStopWatch.Elapsed.TotalSeconds) seconds."
+            }
         }# end if ExcludePerfCounters
 
         if($SqlMetrics) {

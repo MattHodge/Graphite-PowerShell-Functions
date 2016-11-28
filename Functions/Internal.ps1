@@ -70,6 +70,15 @@ Function Import-XMLConfig
         $Config.Counters += $counter.Name
     }
 
+    #Create the Services Array
+    $Config.Services = @()
+
+    #Load each row from the configration file into the service array
+    foreach($service in $xmlfile.Configuration.ServiceCounters.Service)
+    {
+        $Config.Services += $service.Name
+    }
+
     # Create the Metric Cleanup Hashtable
     $Config.MetricReplace = New-Object System.Collections.Specialized.OrderedDictionary
 

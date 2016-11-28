@@ -24,6 +24,9 @@
 		<Counter Name="\PhysicalDisk(*)\Avg. Disk Write Queue Length"/>
 		<Counter Name="\PhysicalDisk(*)\Avg. Disk Read Queue Length"/>
 	</PerformanceCounters>
+    <ServiceCounters>
+        <Service Name="w32time" />
+    </ServiceCounters>
 	<MetricCleaning>
 		<!-- These will be found and replaced in the order they appear here -->
 		<MetricReplace This="physicaldisk\(.* (.*)\:\)" With="physicaldisk.#{CAPTUREGROUP}-drive"/>
